@@ -140,7 +140,7 @@
 | D2a | 已确认并已跑通 | **云 key 仅用于离线资产构造与对照组，不用于在线答案生成**；厂商 DeepSeek。凭据来自进程环境变量 `DEEPSEEK_API_KEY`（未落盘、未入仓库）；参数按官方文档 `https://api.deepseek.com` + `deepseek-flash`。已产出 `data/claims.json`（141 条断言，原文校验 141/141）。运行时由 `ALLOW_ONLINE_LLM` 硬门禁关闭，`--llm` 实测被拒、零云端请求 |
 | D2b | 已确认 | 安全底线：`.gitignore` 已覆盖 `.env` 与 `.env.*`（保留 `.env.example`）；`git log -S"sk-"` 检索历史无密钥痕迹；仓库将设为 Public，故 key 永不进仓库、永不进 Git 历史 |
 | D3 | 已确认 | WorkBuddy 会话 + 录屏；Prompt 链当场整理为 `evidence/prompts/P-xxx.md`，不事后补写 |
-| D4 | 已确认 | **新建独立公开仓库**（GitHub 或 Gitee，须 Public 或提供评审访问权限）。本轮已在本地维护细粒度提交，等用户提供账号/仓库地址后推送 |
+| D4 | 已完成 | 新建独立公开仓库 https://github.com/fufu188/notice-ledger.git，main 已推送（24+ 细粒度提交，远程 HEAD=4d047af，仓库页 200 可访问）；本地已固化 7897 代理配置供后续推送 |
 | D5 | 已核实 | 见 `findings.md` 0.4 节：网盘作品链接 + 作品介绍文档（7 项）+ 视频链接（B站/抖音）；另需仓库、≥3 条 Prompt 链、README 复现指南、5—8 分钟 1080p 视频（含≥2 分钟 AI 协同）、PDF≤30 页技术文档 |
 | E1 | 已核实（无要求） | 官方「比赛环境」仅推荐技术栈，**无服务器/部署硬要求**；本地可跑 + 10 分钟复现即满足 |
 | E2 | 待确认（要求已明确） | 工具任选，但产物必须是 **MP4 / 1080p / 5—8 分钟**，并含 ≥2 分钟 AI 协同复现 |
