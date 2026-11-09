@@ -153,3 +153,31 @@ P-005：带上述两条真实失败输出，让 AI 定位「长文档 BM25 稀�
 
 ### Next
 P-006：混合检索（向量 + 词法）解决 URL 类长 token 漏召；随后技术文档 PDF 与视频脚本。
+
+## Session: 2026-11-09（续 5）— 推翻前一轮「网络受限」的错误结论
+
+> 历史日志按 append-only 保留，此处只追加复核更正，不改写上文记录。
+
+### 复核动机
+上一轮把 `pip install` 失败归因为「会话网络受限」。本轮为回答「要追平生成质量需要给我什么」，先做连通性实测，发现归因错误。
+
+### 实测证据
+| 检查 | 结果 |
+|---|---|
+| 环境注入代理 | `HTTP_PROXY=http://127.0.0.1:1626`（**不是 7897**，也不是交接记录的 8150/5132；代理端口逐会话变化） |
+| `api.deepseek.com` | 直连 401 / 经代理 401 → 可达，仅缺认证 |
+| `api.moonshot.cn` | 直连 200 / 经代理 200 → 可达 |
+| `dashscope.aliyuncs.com` | 直连 000，经代理 404 → 可达 |
+| PyPI / 清华镜像 index 页（curl） | 直连 200、经代理 200 |
+| `pip install` 详细日志 | `Getting page .../simple/fastapi/ -> 403 Client Error: Forbidden` → 沙箱对 pip 的 index 请求单独拦截 |
+| 清空 `HTTP_PROXY/HTTPS_PROXY/ALL_PROXY/PIP_PROXY` 重试 | 仍 `from versions: none`，失败 |
+| 本地 GPU | RTX 4060 Laptop 8GB，C 盘可用 103G，ollama 未装 |
+
+### 更正后的结论
+1. 「网络不通」作废；错在手工指定了过期端口。**排障教训：代理端口必须每次读环境变量，不能沿用记忆值。**
+2. `pip` 层仍有独立限制，故 `app/main.py` 依旧**未运行验证**，`app/server.py` 标准库降级服务继续必要。
+3. **但云端 LLM 路线不受影响**：`_llm_answer` 用标准库 `urllib`，`--llm` 与三个环境变量占位已存在，给 key 即可跑，无需 pip。
+4. 本地模型路线可行：8GB 显存足够跑 7B Q4 量化（约 4–5GB），代价是下载渠道 E3 未确认且需安装运行时。
+
+### 待用户决策
+是否提供 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`、额度上限，以及授权范围（仅离线构造资产 vs 允许在线生成）。详见 `CONFIRM.md` D2a。

@@ -201,6 +201,11 @@
 - 已装：numpy 2.5.4、requests 2.34.2。未装：fastapi、uvicorn、pydantic、sklearn、sentence_transformers。
 - 当前会话 `HTTP_PROXY=http://127.0.0.1:5132`（交接记录的是 `127.0.0.1:8150` 会劫持本地请求）。
 - 因此最小可运行切片设计为：检索 / 冲突检测 / 回答核心**零第三方依赖**（纯标准库），FastAPI 只做薄封装层，依赖另列 `requirements.txt`。
-- **依赖安装实测（本轮新事实）**：`python -m venv .venv` 成功；`pip install -r requirements.txt` 经 `127.0.0.1:7897` 代理报 `WinError 10061 由于目标计算机积极拒绝，无法连接`，改清华镜像仍 `No matching distribution found for fastapi>=0.115` → 当前会话网络受限，无法安装第三方包。故 `app/main.py`（FastAPI 主实现）**已写但未运行验证**；新增 `app/server.py` 标准库 HTTP 演示服务作为降级，自测通过。`.venv` 保留供后续联网复用。
+- **依赖安装实测与更正（2026-11-09 20:30 复核）**：早先记为「当前会话网络受限」是**错误结论**，根因是当时手工指定了 `127.0.0.1:7897`，而本会话实际注入的是 `HTTP_PROXY=http://127.0.0.1:1626`。复核实测：
+  - 浏览器/CDP 层可达：`api.deepseek.com` 直连 `401`、`api.moonshot.cn` 直连 `200`、PyPI 与清华镜像的 index 页直连/代理均 `200`（401/200 均表示能到达服务器）。
+  - `pip` 层仍失败：详细日志显示 `Getting page https://pypi.tuna.tsinghua.edu.cn/simple/fastapi/` → `403 Client Error: Forbidden`，清空代理环境变量直连重试同样 `from versions: none`。即**沙箱对 pip 的 index 请求有独立拦截**，与「能否调用云端 LLM API」无关。
+  - 因此 `app/main.py`（FastAPI 主实现）**仍未运行验证**，`app/server.py` 标准库降级服务依然必要；但「网络不通」的说法作废。
+  - **关键区分**：`app/answer.py::_llm_answer` 用标准库 `urllib` 实现，`--llm` 开关与 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` 占位已存在 —— **走云端 LLM 不需要安装任何第三方包**，给三个环境变量即可跑；pip 装不上不构成这条路的阻塞。
+- **本地推理条件（2026-11-09 实测）**：`NVIDIA GeForce RTX 4060 Laptop GPU, 8188 MiB`，C 盘可用 103G，`ollama` 未安装。7B 级 Q4 量化模型（约 4–5GB）在本机可跑，是「零成本 + 可复现」的本地生成备选；模型下载渠道仍未确认（E3）。
 - **本轮作品实测**：7 个标准库单测全过；评测集 `recall@3 = 4/4 = 100%`；零依赖 HTTP 服务 `/health` `/sources` `/ask` 自测通过（docs=4、chunks=8）。
 

@@ -44,7 +44,8 @@ uvicorn app.main:app --reload --port 8000
 
 装好依赖后浏览器打开 `http://127.0.0.1:8000/docs`。
 
-> **本机实测（诚实声明）**：当前会话网络受限，`pip install` 两次失败——`127.0.0.1:7897` 代理 `WinError 10061`，改清华镜像仍 `No matching distribution found for fastapi>=0.115`。因此 **FastAPI 服务层已写但未运行验证**；上面的标准库服务是降级方案，不冒充 FastAPI 已可用。联网后按上述命令即可验证主服务，`.venv` 已建可复用。
+> **本机实测（2026-11-09 20:30 更正）**：此前写的「会话网络受限」是**错误结论**——当时误用了 `127.0.0.1:7897`，实际注入的是 `HTTP_PROXY=127.0.0.1:1626`。复核后 DeepSeek / Moonshot / PyPI 的 HTTPS 请求均可达；但 `pip` 取 index 时被沙箱单独拦截（`403 Forbidden`，清空代理直连仍失败）。因此 **FastAPI 服务层已写但依旧未运行验证**，标准库服务仍是必要降级，不冒充 FastAPI 可用。
+> 另一个重要区分：**走云端 LLM 不需要装任何依赖**——`app/answer.py::_llm_answer` 用标准库 `urllib`，`--llm` 开关和三个环境变量占位已就位，给 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` 即可跑。
 > 本地调试前需清除 `HTTP_PROXY`（沙箱注入的代理会劫持 `127.0.0.1` 请求，见 `findings.md` 第 5 节）。
 
 可选云端生成（D2：仅复杂分析 / 复杂任务时启用）：
