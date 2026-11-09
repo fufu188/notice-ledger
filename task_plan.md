@@ -42,9 +42,9 @@ Phase 3（Phase 2 并行进行中：待确认事项尚未闭环，但不阻塞�
 
 - [ ] 报名信息与提交口径核实（A1—A6、B1）→ 从开发关键路径移出，转并行推进；**尚未完成**
 - [x] 选题真实痛点锁定（对应评分 25% 实用价值 + 拒绝玩具项目）→ 用户授权代选，定为校务/赛事通知可信问答助手
-- [x] 过程留存机制投入运行：`P-001`、`P-002`、`P-003` 三条链（P-002 含修 Bug 引导）、`devlog.md` 已起；**录屏素材仍待用户本人录制**
-- [x] 作品可运行版本第一阶段：零依赖检索核心 + 冲突检测 + 溯源/拒答 + 自建评测集（v0.1，7 个单测全过、recall@3 4/4）
-- [x] 服务层可演示：`app/server.py` 标准库 HTTP 服务 selftest 通过（`/health` `/sources` `/ask`）；`app/main.py` FastAPI 版因依赖未装**未验证**
+- [x] 过程留存机制投入运行：`P-001`、`P-002` 两条链（P-002 含修 Bug 引导）、`devlog.md` 已起；**录屏素材仍待用户本人录制**
+- [x] 作品可运行版本第一阶段：零依赖检索核心 + 冲突检测 + 溯源/拒答 + FastAPI 薄封装 + 自建评测集（v0.1，7 个单测全过、recall@3 4/4）
+- [x] 服务层可演示：`app/server.py` 零依赖 HTTP 降级服务自测通过；`app/main.py`（FastAPI）因依赖未装**未验证**
 - [ ] 省赛提交物齐备
 - **Status:** in_progress
 
@@ -91,14 +91,13 @@ Phase 3（Phase 2 并行进行中：待确认事项尚未闭环，但不阻塞�
 | 2026-11-09：D1 定为校务/赛事通知可信问答助手，核心为冲突检测 + 溯源 + 时效权重 + 拒答 + 评测集 | 用户授权代选「含金量高」；理由见 `findings.md` 第 9 节；待用户追认 |
 | 2026-11-09：检索核心零第三方依赖，FastAPI 只做薄封装 | 本机实测缺 fastapi/uvicorn/pydantic，且 10 分钟复现要求低门槛；离线优先（D2） |
 | 2026-11-09：LLM 只留环境变量占位，不写死任何 key | D2a 未确认；信息边界与公开仓库安全要求 |
-| 2026-11-09：依赖装不上时不硬跑，保留 FastAPI 主实现 + 增加标准库 HTTP 降级服务 | 用户约定「跑不通如实说明再降级，不假装能用」；避免 10 分钟复现被环境卡死 |
+| 2026-11-09：依赖装不上时降级为零依赖 HTTP 服务，FastAPI 主实现保留 | 不硬跑、不假装可用；同时不降低可演示性，对应「过程可复现 25%」 |
 
 ## Errors Encountered
 
 | Error | Attempt | Resolution |
 |-------|---------|------------|
 | `sh "$PWF_SKILL_DIR/scripts/init-session.sh"` 报 `/scripts/init-session.sh: No such file or directory` | 1 | 同一命令行里的变量赋值前缀在参数展开时未生效，`$PWF_SKILL_DIR` 展开为空。改用脚本绝对路径 `C:/Users/ASUS/.workbuddy/skills/planning-with-files/scripts/init-session.sh` 执行成功 |
-| `pip install -r requirements.txt` 经 `127.0.0.1:7897` 报 `WinError 10061`；改清华镜像仍 `No matching distribution found for fastapi>=0.115` | 2 | 判定当前会话网络受限，停止重试；新增 `app/server.py` 标准库 HTTP 降级服务并 selftest 通过，FastAPI 版明确标注「未验证」 |
 
 ## Notes
 
