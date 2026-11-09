@@ -73,9 +73,15 @@ python -m app.cli --llm "比较三条 11.18 口径并说明各自风险"
 | 无依据拒答 | 最高得分低于 `MIN_RELEVANCE_SCORE` → 明确拒答 | `app/answer.py` |
 | 意图控制 | `SYSTEM_PROMPT` 五条硬约束（只用片段、逐条引用、冲突并列、不足拒答、整理稿不写成官方定论） | `app/answer.py` |
 | 可量化评测 | `EVAL_SET` 8 道真实语料题输出 recall@3 / recall@5；11 个标准库单测覆盖切分/检索/冲突/拒答/引用/同义扩展 | `app/cli.py`、`tests/test_core.py` |
-| Web 界面 | 单文件零依赖前端：知识库侧栏、引用溯源、口径差异高亮、拒答态、耗时统计、`#q=` 分享链接 | `app/web/index.html` |
-| 科技粒子动态视觉 | Canvas 星座粒子背景（视口自适应、鼠标交互、reduced-motion 禁用）+ 玻璃拟态面板 + 青紫霓虹 token 体系；功能与结构未动 | `app/web/index.html`、截图 `05/06` |
-| 服务接口 | FastAPI 薄封装 `/health` `/sources` `/ask` | `app/main.py` |
+| Web 界面 | 单文件零依赖前端：三栏骨架 + 10 个交互模块（见 `docs/ui-modules.md`），`#q=` / `#tab=` 分享链接 | `app/web/index.html` |
+| 证据侧栏 | 右栏「证据 / 脉络 / 评测」三 Tab：检索链路四步、证据强度三因子拆解、命中分数条、通知时间轴、基准指标与消融 | `app/web/index.html`、`app/panels.py` |
+| 内联引用联动 | 正文 `[n]` 渲染为可点芯片，点击滚到右栏对应片段并高亮；引用列表与面板双向联动 | `app/web/index.html` |
+| 证据强度 | 由首位 BM25、问题词项覆盖、是否落地三因子算出并公开拆解；**明确标注不评价答案正确性** | `app/answer.py` `evidence_strength()` |
+| 口径冲突矩阵 | 有差异时渲染「值 / 出处 / 权威」三列表格，不做合并裁定 | `app/web/index.html` |
+| 截止倒计时 | 空态 SVG 进度环 + 顶栏常驻胶囊，秒级跳动，可导出 `.ics` | `app/panels.py`、`app/card.py` |
+| 命令面板 | `Ctrl/⌘+K` 模糊检索问题、面板与文档，`↑↓/Enter/Esc` 全键盘操作 | `app/web/index.html` |
+| 科技粒子动态视觉 | Canvas 星座粒子（视口自适应、鼠标连线、慢帧自动降密度、reduced-motion 禁用）+ 玻璃拟态 + 青紫霓虹 token | `app/web/index.html` |
+| 服务接口 | FastAPI 与标准库降级服务**同一套端点**：`/health` `/sources` `/api/overview` `/ask` | `app/main.py`、`app/server.py` |
 
 ## 架构与约束
 
@@ -119,7 +125,7 @@ authority: 3
 - `app/main.py`（FastAPI）因依赖未装**未运行验证**；`app/server.py`（标准库降级）已自测通过。两者接口语义一致。
 - 口径差异检测是**规则基线**（日期 + 时间关键词），不是语义推理；它只提示「请核对」，不判断谁对谁错。
 - 离线回答是**抽取式**，不做生成式改写；生成能力只在配置 LLM 后启用。
-- 尚无文档导入接口、增量更新、多轮对话、前端界面。
+- 尚无文档导入接口与增量更新；前端不做多轮上下文记忆（每问独立检索，避免把上一轮结论当成依据）。
 - 作品还未达到交付标准；视频、PDF、≥3 条 Prompt 链、公开仓库均未完成。
 
 ## 迭代路线（每次对应一条 Prompt 链 + 一次细粒度提交）
@@ -197,7 +203,7 @@ progress.md    会话日志
 4. `python -m app.server --port 8000` → 打开 `http://127.0.0.1:8000/`，可试五要素卡片、`.ics` 下载、`#q=` 分享链接。
 5. 可选：`EVAL_REUSE_BASELINE=1 python tools/run_eval_v1.py && python tools/score_eval.py` 复跑 24 题基准集与 10 组消融。
 
-FastAPI 版需 `pip install -r requirements.txt`；本会话用离线 wheel 装齐并实测 `/health` `/sources` `/` `/docs` `/ask` 全 200。
+FastAPI 版需 `pip install -r requirements.txt`；本会话用离线 wheel 装齐并实测 `/health` `/sources` `/api/overview` `/` `/docs` `/ask` 全 200。标准库服务同样提供 `/api/overview`，两套服务对外字段一致（`tools/probe_ui.py`、`tools/probe_fastapi.py` 可复验）。
 `ALLOW_ONLINE_LLM` 默认关闭，DeepSeek key 仅用于离线断言构建与对照组。
 
 ## 诚实边界
