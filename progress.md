@@ -33,3 +33,39 @@
 ### Notes
 - 并行硬约束未变：12.12 六级笔试、每日 20:00—20:50 六级时段、固定学习时段。
 - 本轮未访问任何官方页面，未新增任何比赛细节；是否授权核查见 `CONFIRM.md` B5。
+
+## Session: 2026-11-09（续）— 垂直切片 v0.1 与首个真实修 Bug 闭环
+
+### Current Status
+- **Phase:** 3 in_progress（Phase 2 并行）
+- **作品：** v0.1 可运行垂直切片，零依赖核心 + FastAPI 薄封装；非成品
+
+### Actions Taken
+1. 收到用户 4 项确认：C2 三者都要；D1 授权代选「含金量高」；D2 本地离线优先、复杂任务可用用户 API key；D3 WorkBuddy 会话 + 录屏。落盘到 `CONFIRM.md` 状态表与 `findings.md` 第 9 节，新增待确认项 D2a（key 的厂商/模型/额度/注入方式）。
+2. D1 定为「校务 / 赛事通知可信问答助手」，核心为口径差异检测 + 引用溯源 + 时效/来源权重 + 无依据拒答 + 可量化评测；选型理由写进 `findings.md` 第 9 节。
+3. 实测环境：`python` 3.13.14（交接记录为 3.11）；已装 numpy 2.5.4 / requests 2.34.2；缺 fastapi / uvicorn / pydantic / sklearn；`HTTP_PROXY=127.0.0.1:5132`。据此把核心设为零第三方依赖，FastAPI 只做薄封装。
+4. 生成 `app/`（models / loader / chunker / retriever / answer / cli / main）、`tests/test_core.py`、`data/docs/demo-0*.md`（4 条 DEMO 整理稿，明确非官方原文）、`README.md`、`.env.example`、`requirements.txt`、`evidence/prompts/P-001.md`。
+5. **首个真实修 Bug 闭环（P-002）**：CLI 冒烟发现口径差异误把「国赛报名 12-10 至 12-21」当截止口径、同一来源重复、CLI 重复打印。修复：小句级切分 + 收窄强时间词 + `(date, doc_id)` 去重 + 按文档去重片段 + CLI 只打印条数；新增 2 个回归测试。
+
+### Test Results
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| 标准库单测（修复前） | 全过 | `Ran 5 tests ... OK` | PASS |
+| 标准库单测（修复后） | 全过且回归锁定 | `Ran 7 tests ... OK`，新增 2 个回归测试 | PASS |
+| 评测集 recall@3 | 命中 4 条 | `4/4 = 100%` | PASS |
+| 口径差异输出 | 不含报名窗口日期、来源不重复 | 6 条 → 4 条，`12-10/12-21` 消失，`12-27` 与 `2027年1月底` 保留 | PASS |
+| 无依据拒答 | 无关问题拒答 | 「今天天气适合放风筝吗」→ `refused=True, 命中 0 条` | PASS |
+| FastAPI 服务 | 未验证 | 本机未装 fastapi/uvicorn/pydantic，**未启动**；需 `pip install -r requirements.txt` 后验证 | 未执行 |
+
+### Errors
+| Error | Resolution |
+|-------|------------|
+| P-002：`detect_conflicts` 用整段 chunk + 宽泛时间词，误报报名窗口日期 | 小句切分 + 强时间词 + 去重，并加回归测试；详见 `evidence/prompts/P-002.md` |
+| 环境差异：交接记录 Python 3.11 / 代理 8150，实测 3.13.14 / 5132 | 记录为 `findings.md` 第 9 节新事实，不覆盖原交接内容 |
+
+### Next
+1. 用户按 `CONFIRM.md` 剩余 19 项补答（最少必答 A2、A5、C1、C3、D2a、D4、D5、B5）。
+2. 安装 `requirements.txt` 并冒烟 FastAPI `/health` `/sources` `/ask`。
+3. 导入真实通知语料替换 DEMO 数据；扩充评测集；P-003 起每条链单独提交。
+4. 用户本人完成 ≥2 分钟 AI 协同录屏（AI 不代录）。
+
