@@ -28,10 +28,22 @@ python -m unittest discover -s tests -v
 Web 演示（**零依赖，本机立即可跑**）：
 
 ```bash
-python -m app.server --selftest     # 自启自停，验证 /health /sources /ask 与界面路由
+python -m app.server --selftest     # 自启自停，验证 /health /sources /api/overview /ask 与界面路由
 python -m app.server --port 8000    # 常驻服务，浏览器打开 http://127.0.0.1:8000/ 即为界面
 curl -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" -d "{\"question\":\"选错组别会怎样\"}"
 ```
+
+Windows 下也可以直接双击项目根目录的 **`start-ui.bat`**：它会先检查 8000 是否已被旧进程占用（这正是
+"面板显示接口不可用"的常见成因），再拉起服务并打开浏览器。
+
+> **改了代码/加了文档，必须重启服务进程**。`index.html` 是每次请求从磁盘读的，所以页面永远是新的；
+> 而 Python 进程启动时就把模块与索引加载进内存，**不会热更新**。于是会出现"新页面 + 旧后端"：
+> 右栏「脉络/评测」显示接口不可用、左栏渠道层级空白。页面现在会显式提示并给「重新请求」按钮，
+> 顶栏也会亮起琥珀色「数据不同步」胶囊（详见 `docs/ui-modules.md` 第九节）。
+>
+> 打开页面后先做三秒自检：顶栏应为 **文档 10 / 片段 64 / 断言 141**，
+> `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/overview` 应为 **200**。
+> 数字偏小或返回 404，就是连到了旧进程——关掉旧窗口重开即可。
 
 FastAPI 主实现（`app/main.py`，对应选定技术栈 Python/FastAPI）：
 
@@ -82,6 +94,7 @@ python -m app.cli --llm "比较三条 11.18 口径并说明各自风险"
 | 命令面板 | `Ctrl/⌘+K` 模糊检索问题、面板与文档，`↑↓/Enter/Esc` 全键盘操作 | `app/web/index.html` |
 | 科技粒子动态视觉 | Canvas 星座粒子（视口自适应、鼠标连线、慢帧自动降密度、reduced-motion 禁用）+ 玻璃拟态 + 青紫霓虹 token | `app/web/index.html` |
 | 服务接口 | FastAPI 与标准库降级服务**同一套端点**：`/health` `/sources` `/api/overview` `/ask` | `app/main.py`、`app/server.py` |
+| 接口失败态 | 失败按 404 / 网络不可达 / 5xx 分类给原因与重启命令，附「重新请求」；顶栏亮「数据不同步」；非 404 自动重试一次。可用 `tools/mock_stale_server.py` 复验 | `app/web/index.html`、`tools/mock_stale_server.py` |
 
 ## 架构与约束
 

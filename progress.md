@@ -394,3 +394,45 @@ AI 侧全部完成；仅剩三项物理上须用户本人执行：Public 仓库�
 
 ### 产出
 `app/web/index.html`（2338 行，模块化 JS）、`app/panels.py`、`app/answer.py`（+evidence_strength）、`app/main.py`、`app/server.py`、`data/metrics.json`、`docs/ui-modules.md`、`tools/probe_ui.py`、`tools/probe_fastapi.py`、`evidence/prompts/P-011.md`。
+
+## Session: 2026-11-09（续 14）— 定位「面板接口不可用」：旧服务进程 + 失败态显式化
+
+### 现象（用户实拍三张图）
+右栏「脉络」「评测」显示"面板数据接口不可用"；左栏「渠道效力层级」整块空白；
+「可核查资产」三格是 `—`。同一时刻「证据」Tab、来源列表、问答、倒计时都正常。
+
+### 排查
+| 步骤 | 手段 | 结果 |
+|---|---|---|
+| 1 | 对 8000–8040 逐个 `curl /health` 与 `/api/overview` | 6 个 python 进程（8000/8001/8004/8005/8006/8010）**全部 404** |
+| 2 | `Get-NetTCPConnection` + `Win32_Process` 查启动时间与命令行 | 最早 20:09 启动；其中 8000 内存数据是 **9 文档 / 69 片段**（chunker 改造前） |
+| 3 | 新建进程（8031）复测 | `/api/overview` **200**，knowledge = 10/64/141 → 代码没问题，是进程旧 |
+| 4 | 拿自己的存证图核对顶栏数字 | 07 图是 8/53/116，而磁盘是 10/64/141 → 数字被 `countUp` 的 rAF 动画截在中途 |
+
+### 根因
+`index.html` 每次请求从磁盘读（页面永远最新），Python 进程启动时把模块与索引载入内存（不热更新）。
+于是"新页面 + 旧后端"：页面有 Tab 与 `/api/overview` 请求，旧进程没有该端点 → 404 →
+前端 `.catch(() => null)` 静默吞掉 → 三个区域同时空白，且没有任何原因说明。
+
+### 修复
+| 问题 | 处理 |
+|---|---|
+| 失败被静默吞掉 | `api()` 给错误分类（`stale`/`network`/`http`）；`Promise.allSettled` 不再吞异常 |
+| 文案是哑巴 | 错误框给「具体原因 + 重启命令 + 重新请求」；404 明确说"连的是旧版进程" |
+| 顶栏数字两个口径 | 统一优先 `overview.knowledge`，退回 `/health`；不一致时亮琥珀「数据不同步」并写明两侧数字 |
+| 瞬时抖动打空面板 | 非 404 失败 1.2s 自动重试一次 |
+| 截图数字是半截（8/53/116） | `countUp` 检测 `navigator.webdriver` / `HeadlessChrome`，命中直接写终值（避免存证材料失真） |
+| 环内文案不通（"距截止 · 天"） | 改为数字 + "天后截止"，逾期态缩小字号防溢出 |
+| 用户可能再连旧进程 | 新增 `start-ui.bat`：先检测 8000 占用并提示，再拉起服务与浏览器 |
+
+### 验证
+- 正常态 8000：`/health` 10/64、`/api/overview` 200；DOM 断言 `statDocs=10 statChunks=64 statClaims=141`、
+  `chan` 6 行、错误框 **0** 个。
+- 失败态（`tools/mock_stale_server.py` @8040）：错误框 **3** 个（左栏渠道 + 右栏两 Tab）、
+  「数据不同步」胶囊点亮、文案含 `HTTP 404` → 见 `evidence/screenshots/10-panel-fallback.png`。
+- `node --check` 通过；HTML 14 类标签配平；35/35 单测未受影响（本次只动前端与文档）。
+- 重截 07/08/09 三张存证图，数字均落定为 10/64/141。
+
+### 产出
+`app/web/index.html`（失败态 + 单一口径 + SKIP_ANIM + 环内文案）、`tools/mock_stale_server.py`、
+`start-ui.bat`、`docs/ui-modules.md` 第九节、README「重启须知」与自检三行、`evidence/screenshots/10-panel-fallback.png`。
