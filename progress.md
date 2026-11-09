@@ -213,3 +213,17 @@ P-006：混合检索（向量 + 词法）解决 URL 类长 token 漏召；随后
 
 ### Next
 P-007：用同一 key 造纯生成基线对照组，在口径基准集上与抽取式裁决对比幻觉率 / 裁决准确率 / 归因可支撑率。
+
+## Session: 2026-11-09（续 7）— 代理 7897 实测 + 公开资料核实 → ROADMAP.md
+
+### 代理实测
+- `0.0.0.0:7897 LISTENING`（PID 17668）与 `127.0.0.1:1626` 并存；7897 对 deepseek / baidu / api-docs 返回 401/200/200，对 pypi / arxiv / github 为 000。
+- 更正上一轮归因：不是「端口记错」，当时 7897 未就绪；现在可用但**仍装不了 pip**（7897 / 1626 / 直连三路径均失败）。学术源改由检索工具通道核实。
+
+### 资料核实
+- 一手核实并采用 10 项：ConflictScore (2606.26437)、CONFLICTS (2506.08500)、Knowledge Conflicts 综述 (2403.08319)、ALCE (2305.14627)、TREC 2024 support eval (2504.15205)、TREC 2025 RAG Track (NIST)、TA-RAG (2507.22917)、Contradictions in Context (2511.06668)、RAGChecker (amazon-science)、Ragas 官方文档。
+- 剔除：二手聚合站汇总的 2026 论文编号与增益数字、未核实的 T-GRAG/TVS、B 站第三方上传参数。
+- 关键结论：LLM 裁判不能当金标准（TREC SIGIR 2025 一致率 56%→72%）；最新 ConflictScore 的「原子断言 × 逐文档标注」与已有 141 条断言同构，可零成本落地。
+
+### 产出
+- `ROADMAP.md`：资料摘要 / 对计划影响 / P-007 五子步 / 从当前到国赛的完整步骤 / 优先级依赖风险。目标与范围保持不变。
