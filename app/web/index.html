@@ -92,6 +92,12 @@
   }
   .pill:hover{border-color:rgba(56,217,255,.3);color:var(--fg)}
   .pill b{color:var(--fg);font-weight:650;font-variant-numeric:tabular-nums}
+  /* 数据不同步警示：默认不占位，只在后端索引与磁盘不一致时亮起 */
+  .warnpill{display:none;cursor:pointer;color:var(--warn);border-color:rgba(251,191,36,.45);
+    background:rgba(251,191,36,.08)}
+  .warnpill.on{display:inline-flex}
+  .warnpill .dot{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:breathe 1.6s var(--ease) infinite}
+  .warnpill:hover{color:#fde68a;border-color:rgba(251,191,36,.7)}
   .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:breathe 2.4s var(--ease) infinite}
   .dot.off{background:var(--danger);box-shadow:0 0 8px var(--danger);animation:none}
   @keyframes breathe{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.42;transform:scale(.82)}}
@@ -246,7 +252,7 @@
     font-variant-numeric:tabular-nums;color:var(--fg);
     text-shadow:0 0 20px rgba(56,217,255,.45);
   }
-  .cd-unit{font-size:10px;color:var(--fg-faint);letter-spacing:2.4px;text-transform:uppercase;margin-top:3px}
+  .cd-unit{font-size:11px;color:var(--fg-faint);letter-spacing:1.4px;margin-top:5px}
   .cd-meta{font-size:10.5px;color:var(--fg-faint);text-align:center;line-height:1.55;max-width:190px}
   .cd-meta b{color:var(--fg-dim);font-weight:600}
   .cd-clock{
@@ -528,6 +534,12 @@
     color:var(--fg-faint);font-size:11.5px;line-height:1.7;
   }
   .pempty .big{display:block;margin:0 auto 8px;color:rgba(148,163,184,.4)}
+  /* 接口失败态：说清原因并给出口，不留「不可用」这种哑巴文案 */
+  .pempty.err{border-style:solid;border-color:rgba(251,191,36,.28);background:rgba(251,191,36,.05);
+    color:var(--fg-dim);text-align:left}
+  .pempty.err .big{margin:0 auto 9px;color:var(--warn)}
+  .pempty.err .retryrow{margin-top:10px;text-align:center}
+  #channels .pempty{padding:14px 11px;font-size:11px;line-height:1.65}
 
   /* 证据：检索流水 */
   .ev-flow{display:flex;flex-direction:column;gap:0}
@@ -804,6 +816,10 @@
     <span class="pill hide-sm">文档 <b id="statDocs">—</b></span>
     <span class="pill hide-sm">片段 <b id="statChunks">—</b></span>
     <span class="pill hide-sm">断言 <b id="statClaims">—</b></span>
+    <span class="pill warnpill" id="pillStale" role="status"
+          title="服务进程与磁盘数据不一致，重启后端服务即可">
+      <i class="dot"></i>数据不同步
+    </span>
     <span class="pill hide-sm" id="pillCd" role="status" title="点击查看完整截止时间" style="cursor:pointer">
       距截止 <b id="cdMini">—</b>
     </span>
@@ -1031,10 +1047,18 @@ function toast(msg, type){
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 340); }, 2600);
 }
 
-/* 数字滚动 */
+/* 数字滚动
+   无头浏览器 / 自动化环境里 rAF 会被节流甚至挂起，动画会停在中间值，
+   截图看起来就像「数据只有一半」。这类环境直接写终值，不做装饰动画。 */
+const SKIP_ANIM = (() => {
+  try { return navigator.webdriver === true || /HeadlessChrome/i.test(navigator.userAgent || ''); }
+  catch(e){ return false; }
+})();
+
 function countUp(node, to, dur){
   if (!node) return;
   if (to == null){ node.textContent = '—'; return; }
+  if (SKIP_ANIM){ node.textContent = to; return; }
   const start = performance.now();
   const from = 0;
   function step(now){
@@ -1044,7 +1068,7 @@ function countUp(node, to, dur){
     if (p < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
-  // 兜底：某些环境（无头浏览器/后台标签页）rAF 会被挂起，动画可能停在中间值
+  // 兜底：某些环境（后台标签页）rAF 会被挂起，动画可能停在中间值
   setTimeout(() => { if (node.textContent !== String(to)) node.textContent = to; }, (dur || 520) + 120);
 }
 
@@ -1053,50 +1077,106 @@ async function api(path, body){
   const opt = body ? {
     method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
   } : {};
-  const res = await fetch(path, opt);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  let res;
+  try{
+    res = await fetch(path, opt);
+  }catch(e){
+    const err = new Error('无法连接后端（服务可能未启动）');
+    err.kind = 'network';
+    throw err;
+  }
+  if (!res.ok){
+    const err = new Error('HTTP ' + res.status);
+    err.status = res.status;
+    // 404 基本只有一个成因：页面是新的、服务进程还是旧的（没有这个端点）
+    err.kind = res.status === 404 ? 'stale' : 'http';
+    throw err;
+  }
   return res.json();
 }
 
 /* ---------- 4. 启动与侧栏渲染 ---------- */
 async function boot(){
+  let health = null, sources = [], overview = null, ovErr = null;
   try{
-    const [health, sources, overview] = await Promise.all([
-      api('/health'), api('/sources'), api('/api/overview').catch(() => null)
+    const [hs, ss, os] = await Promise.allSettled([
+      api('/health'), api('/sources'), api('/api/overview')
     ]);
-    $('#liveTxt').textContent = health.llm_configured ? '在线 · LLM' : '在线 · 离线抽取';
-    $('#liveDot').classList.remove('off');
-    countUp($('#statDocs'), health.docs);
-    countUp($('#statChunks'), health.chunks);
-    S.overview = overview;
-
-    const claims = overview && overview.knowledge ? overview.knowledge.claims : null;
-    if (claims != null) countUp($('#statClaims'), claims);
-    else $('#statClaims').textContent = '—';
-
-    renderSources(sources);
-    if (overview){
-      renderChannels(overview.channels || []);
-      renderAssets(overview);
-      renderTimeline(overview);
-      renderEval(overview.metrics || {});
-      renderEvidenceEmpty();
-      $('#inspStamp').textContent = '数据 ' + (overview.generated_at || '').replace('T',' ').slice(5,16);
-      if (overview.deadline) startCountdown(overview.deadline);
-    }else{
-      renderEvidenceEmpty();
-      renderPanelsFallback();
-    }
-    $('#hintGen').textContent = health.llm_configured
-      ? '生成：已配置 LLM（离线门禁开启时才在线）'
-      : '生成：抽取式（未配置 LLM，全离线可复现）';
+    if (hs.status === 'rejected') throw hs.reason;
+    health = hs.value;
+    if (ss.status === 'fulfilled') sources = ss.value;
+    if (os.status === 'fulfilled') overview = os.value;
+    else ovErr = os.reason;
   }catch(e){
     $('#liveTxt').textContent = '服务未就绪';
     $('#liveDot').classList.add('off');
-    renderPanelsFallback();
+    setStale(true, e.kind === 'network'
+      ? '未连接到后端服务。请在项目目录运行 python -m app.server --port 8000'
+      : '后端返回异常：' + (e.message || e));
+    renderPanelsFallback(e);
+    renderChannelsError(e);
+    renderAssetsError(e);
     renderEmpty();
     toast('后端未就绪：' + (e && e.message || e), 'err');
+    return;
   }
+
+  $('#liveTxt').textContent = health.llm_configured ? '在线 · LLM' : '在线 · 离线抽取';
+  $('#liveDot').classList.remove('off');
+  S.overview = overview;
+
+  // 计数只认一个口径：优先概览（现算自磁盘），退回 /health（进程内索引）
+  const k = (overview && overview.knowledge) || {};
+  const docs = k.docs != null ? k.docs : health.docs;
+  const chunks = k.chunks != null ? k.chunks : health.chunks;
+  countUp($('#statDocs'), docs);
+  countUp($('#statChunks'), chunks);
+  if (k.claims != null) countUp($('#statClaims'), k.claims);
+  else $('#statClaims').textContent = '—';
+
+  // 进程内索引 ≠ 磁盘数据 → 说明服务是加文档之前启动的，必须重启
+  if (k.docs != null && (k.docs !== health.docs || k.chunks !== health.chunks)){
+    setStale(true, '服务进程内是 ' + health.docs + ' 文档 / ' + health.chunks +
+      ' 片段，磁盘已是 ' + k.docs + ' / ' + k.chunks + '。重启服务（Ctrl+C 后重新运行）即可同步。');
+  }else{
+    setStale(false);
+  }
+
+  renderSources(sources);
+  if (overview){
+    renderChannels(overview.channels || []);
+    renderAssets(overview);
+    renderTimeline(overview);
+    renderEval(overview.metrics || {});
+    renderEvidenceEmpty();
+    $('#inspStamp').textContent = '数据 ' + (overview.generated_at || '').replace('T',' ').slice(5,16);
+    if (overview.deadline) startCountdown(overview.deadline);
+  }else{
+    renderEvidenceEmpty();
+    renderPanelsFallback(ovErr);
+    renderChannelsError(ovErr);
+    renderAssetsError(ovErr);
+    if (ovErr && ovErr.kind === 'stale'){
+      setStale(true, '后端没有 /api/overview：当前连接的是旧版服务进程，重启服务即可。');
+    }else if (ovErr){
+      // 非 404 的失败（瞬时超时/连接被拒）自动重试一次，避免偶发抖动直接把面板打空
+      setTimeout(() => { if (!S.overview) retryOverview(); }, 1200);
+    }
+  }
+  $('#hintGen').textContent = health.llm_configured
+    ? '生成：已配置 LLM（离线门禁开启时才在线）'
+    : '生成：抽取式（未配置 LLM，全离线可复现）';
+}
+
+/* 顶栏「数据不同步」提示：默认隐藏，只在后端与磁盘不一致时出现 */
+function setStale(on, msg){
+  const el = $('#pillStale');
+  if (!el) return;
+  el.classList.toggle('on', !!on);
+  if (msg) el.title = msg + '（点击查看处理方式）';
+  el.onclick = on ? () => {
+    toast(msg || '服务进程与磁盘数据不一致，重启后端服务即可', 'warn');
+  } : null;
 }
 
 function renderSources(list){
@@ -1138,7 +1218,10 @@ function renderSources(list){
 function renderChannels(levels){
   const box = $('#channels');
   clear(box);
-  if (!levels.length) return;
+  if (!levels.length){
+    box.append(h('div', { class:'pempty' }, h('div', { text:'当前数据里没有渠道层级定义（data/channels.json 为空）。' })));
+    return;
+  }
   const maxRank = levels.length + 1;
   levels.forEach(lv => {
     const weight = Math.round(((maxRank - lv.rank) / maxRank) * 100);
@@ -1278,7 +1361,7 @@ function startCountdown(deadline){
     '</svg>' +
     '<div class="cd-center">' +
       '<div class="cd-num" id="cdNum">—</div>' +
-      '<div class="cd-unit" id="cdUnit">距截止 · 天</div>' +
+      '<div class="cd-unit" id="cdUnit">天后截止</div>' +
     '</div>';
   const meta = $('#cdMeta');
   const dstr = deadline.iso.replace('T', ' ').slice(0, 16);
@@ -1581,10 +1664,73 @@ function renderEval(m){
   pane.append(h('div', { class:'pnote', text:'数据来源：' + (m.source || 'evidence/eval-report.md') + '（生成于 ' + (m.generated_at || '').replace('T',' ') + '）' }));
 }
 
-function renderPanelsFallback(){
-  const t = paneEl('timeline'), e = paneEl('eval');
-  if (t) { clear(t); t.append(h('div', { class:'pempty' }, h('div', { text:'面板数据接口不可用。' }))); }
-  if (e) { clear(e); e.append(h('div', { class:'pempty' }, h('div', { text:'评测数据接口不可用。' }))); }
+function errText(err){
+  if (!err) return '面板数据未加载。';
+  if (err.kind === 'stale')
+    return '后端没有 /api/overview（HTTP 404）：当前连接的是旧版服务进程。重启后端即可恢复——在项目目录按 Ctrl+C 停掉，再运行 python -m app.server --port 8000。';
+  if (err.kind === 'network')
+    return '连不上后端服务。请确认 python -m app.server --port 8000 正在运行。';
+  return '接口返回异常：' + (err.message || err);
+}
+
+function errorBox(text, onRetry){
+  const btn = h('button', { class:'linkbtn', type:'button' }, icon('refresh', 11), '重新请求');
+  btn.addEventListener('click', onRetry);
+  return h('div', { class:'pempty err' },
+    h('span', { class:'big' }, icon('alert', 19)),
+    h('div', { text: text }),
+    h('div', { class:'retryrow' }, btn)
+  );
+}
+
+function renderPanelsFallback(err){
+  const text = errText(err);
+  ['timeline', 'eval'].forEach((name) => {
+    const pane = paneEl(name);
+    if (!pane) return;
+    clear(pane);
+    pane.append(errorBox(text, retryOverview));
+  });
+}
+
+function renderChannelsError(err){
+  const box = $('#channels');
+  if (!box) return;
+  clear(box);
+  box.append(errorBox('未加载到渠道层级。' + errText(err), retryOverview));
+}
+
+function renderAssetsError(err){
+  ['assetClaims', 'assetChunks', 'assetCases'].forEach((id) => {
+    const n = $('#' + id);
+    if (n) n.textContent = '—';
+  });
+  const note = $('#assetNote');
+  if (note) note.textContent = '资产计数来自 /api/overview：' + errText(err);
+}
+
+async function retryOverview(){
+  toast('正在重新请求面板数据…', 'info');
+  try{
+    const o = await api('/api/overview');
+    S.overview = o;
+    const k = o.knowledge || {};
+    if (k.docs != null){ countUp($('#statDocs'), k.docs); countUp($('#statChunks'), k.chunks); }
+    if (k.claims != null) countUp($('#statClaims'), k.claims);
+    renderChannels(o.channels || []);
+    renderAssets(o);
+    renderTimeline(o);
+    renderEval(o.metrics || {});
+    if (o.deadline) startCountdown(o.deadline);
+    setStale(false);
+    toast('面板数据已加载', 'ok');
+  }catch(e){
+    renderPanelsFallback(e);
+    renderChannelsError(e);
+    renderAssetsError(e);
+    setStale(e.kind === 'stale', errText(e));
+    toast('仍然失败：' + (e.message || e), 'err');
+  }
 }
 
 /* ---------- 7. 问答渲染 ---------- */
