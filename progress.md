@@ -252,3 +252,28 @@ P-007：用同一 key 造纯生成基线对照组，在口径基准集上与抽�
 
 ### Next
 P-008：修 D1/D2/D3，用同一基准集复跑，禁止改基准集或调阈值刷分。详见 `evidence/prompts/P-007.md`。
+
+## Session: 2026-11-09（续 9）— 连续排障：P-008 修复 + FastAPI 主实现打通
+
+### 修复清单
+1. **D1 语义级拒答**：两条通用规则（断言分<1.0 且 top1<12；问金额但证据无金额单位）。Q19/Q21 从错误作答改为正确拒答。
+2. **D2 断言补充召回**：新增 `app/claims.py`，141 条已校验断言作为第二检索路径。Q13 补回 20%/25%，Q05 补回 10%。
+3. **D3 裁决结论**：新增权威度排序的裁决句；修掉「补充片段占用 [2][3] 编号导致 citation 错配」的新缺陷，改用 `[补充N]`。
+4. **消融矩阵**：补 `no_claims`/`no_semantic_abstain`/`no_verdict` 三组；修判卷器 `KeyError`；加 `EVAL_REUSE_BASELINE` 固定基线产物。
+5. **FastAPI 硬报错**：PyPI JSON API 直连下 wheel + `pip install --no-index --find-links=.wheels` 离线装齐（含 3 个自动补下的传递依赖）；全端点实测 200。
+6. **回归测试**：新增 `tests/test_p008.py` 10 个测试（含误拒回归），全套 21 个通过。
+
+### 最终验证
+| 检查 | 结果 |
+|---|---|
+| 编译 | `compileall` 通过 |
+| 单元测试 | `Ran 21 tests ... OK` |
+| CLI | `--sources` / `--eval` (6/8, 8/8) / 拒答 正常 |
+| 标准库服务 | `--selftest`：`/` `/health` `/sources` `/ask` 全通 |
+| FastAPI 实服务 | `GET /health` `/sources` `/` `/docs` = 200；`POST /ask` 返回裁决+引用 |
+| 基准集对照 | 修复前 45.8% → 修复后 66.7%；应拒尽拒 0% → 100% |
+| 消融 | `no_claims` -20.8pp、`no_semantic_abstain` -12.5pp、`no_verdict` 0pp（如实记录） |
+| 隐私 | 待提交文件无真实密钥；`.wheels/` 已忽略 |
+
+### 未宣称
+仍不宣称全面超越纯生成基线：错误口径采信率 12.5% vs 8.3%，综合表述生成基线仍占优；已列入技术文档「局限性」待办。

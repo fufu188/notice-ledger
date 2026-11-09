@@ -6,6 +6,9 @@
 .env.*
 !.env.example
 
+# 离线 wheel 缓存（二进制，不入库；由 tools/bootstrap_wheels.py 重建）
+.wheels/
+
 # Python
 __pycache__/
 *.py[cod]

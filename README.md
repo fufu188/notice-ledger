@@ -1,7 +1,7 @@
 # 校务 / 赛事通知可信问答助手（场景化轻量 RAG 知识库）
 
 第九届传智杯「AI 创新应用挑战赛」参赛作品（个人赛 / B 组）。
-**当前状态：v0.2，可运行、可演示，含 Web 界面。** 11 个单测全过；真实官方语料上 `recall@3 = 6/8 (75%)`、`recall@5 = 8/8 (100%)`。已修三类真实缺陷（空壳标题挤占排名、词表不匹配漏召、冲突吞掉答案），过程见 `evidence/prompts/P-002` 与 `P-005`。定位与已核实信息见 `findings.md`；确认状态见 `CONFIRM.md`。
+**当前状态：v0.3，可运行、可演示，含 Web 界面；FastAPI 主实现已实测验证。** 21 个单测全过（含 P-008 的 10 个回归测试）；真实官方语料上 `recall@3 = 6/8 (75%)`、`recall@5 = 8/8 (100%)`。已修三类真实缺陷（空壳标题挤占排名、词表不匹配漏召、冲突吞掉答案），过程见 `evidence/prompts/P-002` 与 `P-005`。定位与已核实信息见 `findings.md`；确认状态见 `CONFIRM.md`。
 
 ## 解决的真实问题
 
@@ -44,7 +44,7 @@ uvicorn app.main:app --reload --port 8000
 
 装好依赖后浏览器打开 `http://127.0.0.1:8000/docs`。
 
-> **本机实测（2026-11-09 20:30 更正）**：此前写的「会话网络受限」是**错误结论**——当时误用了 `127.0.0.1:7897`，实际注入的是 `HTTP_PROXY=127.0.0.1:1626`。复核后 DeepSeek / Moonshot / PyPI 的 HTTPS 请求均可达；但 `pip` 取 index 时被沙箱单独拦截（`403 Forbidden`，清空代理直连仍失败）。因此 **FastAPI 服务层已写但依旧未运行验证**，标准库服务仍是必要降级，不冒充 FastAPI 可用。
+> **本机实测（2026-11-09 20:30 更正）**：此前写的「会话网络受限」是**错误结论**——当时误用了 `127.0.0.1:7897`，实际注入的是 `HTTP_PROXY=127.0.0.1:1626`。复核后 DeepSeek / Moonshot / PyPI 的 HTTPS 请求均可达；但 `pip` 取 index 时被沙箱单独拦截（`403 Forbidden`，清空代理直连仍失败）。**2026-11-09 21:40 更新**：已用 `tools/bootstrap_wheels.py` + `tools/finish_wheels.py` 通过 PyPI JSON API 直连下载 wheel，再 `pip install --no-index --find-links=.wheels` 离线装齐依赖，**FastAPI 主实现现已实测运行**（`/health` `/sources` `/` `/docs` `/ask` 全部 200）。标准库服务保留为「裸 Python、零第三方依赖」的降级路径，用于 10 分钟复现。
 > 另一个重要区分：**走云端 LLM 不需要装任何依赖**——`app/answer.py::_llm_answer` 用标准库 `urllib`，`--llm` 开关和三个环境变量占位已就位，给 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` 即可跑。
 > 本地调试前需清除 `HTTP_PROXY`（沙箱注入的代理会劫持 `127.0.0.1` 请求，见 `findings.md` 第 5 节）。
 

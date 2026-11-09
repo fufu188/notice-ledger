@@ -9,6 +9,7 @@
 产物固化落盘，运行答案时不需要 key、不需要联网。
 """
 import json
+import os
 import sys
 import urllib.request
 import urllib.error
@@ -26,7 +27,8 @@ OUT = ROOT / "evidence" / "baseline" / "run-001.json"
 ABL_OUT = ROOT / "evidence" / "ablation" / "table.json"
 
 FULL = dict(authority_weight=0.15, recency_tau=540, expand=True,
-            min_score=0.35, normalize_dates=True)
+            min_score=0.35, normalize_dates=True,
+            use_claims=True, semantic_abstain=True, verdict=True)
 ABLATIONS = {
     "full": {},
     "no_authority": {"authority_weight": 0.0},
@@ -34,6 +36,9 @@ ABLATIONS = {
     "no_expansion": {"expand": False},
     "no_abstain": {"min_score": 0.0},
     "no_date_norm": {"normalize_dates": False},
+    "no_claims": {"use_claims": False, "semantic_abstain": False},
+    "no_semantic_abstain": {"semantic_abstain": False},
+    "no_verdict": {"verdict": False},
 }
 
 BASELINE_SYSTEM = (
@@ -81,6 +86,9 @@ def extractive(question, hits, params):
         question, hits,
         min_score=p["min_score"],
         normalize_dates=p["normalize_dates"],
+        use_claims=p["use_claims"],
+        semantic_abstain=p["semantic_abstain"],
+        verdict=p["verdict"],
     )
     return {
         "answer": result.text,
@@ -120,22 +128,35 @@ def run():
     }
 
     gen_answers, gen_tokens, gen_errors = [], 0, []
-    for c in cases:
+    reuse = os.environ.get("EVAL_REUSE_BASELINE", "").strip().lower() in ("1", "true", "yes")
+    reused = False
+    if reuse and OUT.exists():
         try:
-            text, usage = llm_answer(c["question"], ext_hits[c["id"]])
-            gen_tokens += usage.get("total_tokens", 0)
-            gen_answers.append({
-                "case_id": c["id"], "question": c["question"],
-                "answer": text, "citations": [], "conflicts": [],
-                "refused": False, "hits": [],
-            })
-        except (urllib.error.HTTPError, urllib.error.URLError, ValueError, KeyError, TimeoutError) as exc:
-            gen_errors.append(f"{c['id']}: {type(exc).__name__}: {str(exc)[:120]}")
-            gen_answers.append({
-                "case_id": c["id"], "question": c["question"],
-                "answer": "", "citations": [], "conflicts": [],
-                "refused": False, "hits": [], "error": str(exc)[:160],
-            })
+            prev = json.loads(OUT.read_text(encoding="utf-8"))
+            gen = prev.get("systems", {}).get("generative_baseline", {})
+            if (len(gen.get("answers", [])) == len(cases) and not gen.get("errors")):
+                gen_answers, gen_tokens = gen["answers"], gen.get("tokens", 0)
+                reused = True
+                print("reusing FIXED generative baseline (no new LLM calls)")
+        except (OSError, ValueError, KeyError):
+            pass
+    if not reused:
+        for c in cases:
+            try:
+                text, usage = llm_answer(c["question"], ext_hits[c["id"]])
+                gen_tokens += usage.get("total_tokens", 0)
+                gen_answers.append({
+                    "case_id": c["id"], "question": c["question"],
+                    "answer": text, "citations": [], "conflicts": [],
+                    "refused": False, "hits": [],
+                })
+            except (urllib.error.HTTPError, urllib.error.URLError, ValueError, KeyError, TimeoutError) as exc:
+                gen_errors.append(f"{c['id']}: {type(exc).__name__}: {str(exc)[:120]}")
+                gen_answers.append({
+                    "case_id": c["id"], "question": c["question"],
+                    "answer": "", "citations": [], "conflicts": [],
+                    "refused": False, "hits": [], "error": str(exc)[:160],
+                })
     key, base, model = resolve()
     systems["generative_baseline"] = {
         "params": {"model": model, "base_url": base, "temperature": 0, "top_k": 5},

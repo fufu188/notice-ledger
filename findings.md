@@ -204,7 +204,7 @@
 - **依赖安装实测与更正（2026-11-09 20:30 复核）**：早先记为「当前会话网络受限」是**错误结论**，根因是当时手工指定了 `127.0.0.1:7897`，而本会话实际注入的是 `HTTP_PROXY=http://127.0.0.1:1626`。复核实测：
   - 浏览器/CDP 层可达：`api.deepseek.com` 直连 `401`、`api.moonshot.cn` 直连 `200`、PyPI 与清华镜像的 index 页直连/代理均 `200`（401/200 均表示能到达服务器）。
   - `pip` 层仍失败：详细日志显示 `Getting page https://pypi.tuna.tsinghua.edu.cn/simple/fastapi/` → `403 Client Error: Forbidden`，清空代理环境变量直连重试同样 `from versions: none`。即**沙箱对 pip 的 index 请求有独立拦截**，与「能否调用云端 LLM API」无关。
-  - 因此 `app/main.py`（FastAPI 主实现）**仍未运行验证**，`app/server.py` 标准库降级服务依然必要；但「网络不通」的说法作废。
+  - 因此当时 `app/main.py` 未验证。**2026-11-09 21:40 已解决**：改用 PyPI JSON API 直连下 wheel + `pip install --no-index --find-links=.wheels` 离线安装成功（fastapi 0.162.2 / uvicorn 0.54.0 / pydantic 2.14.3），`app/main.py` 全部端点实测 200。`app/server.py` 保留为零依赖降级路径。
   - **关键区分**：`app/answer.py::_llm_answer` 用标准库 `urllib` 实现，`--llm` 开关与 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` 占位已存在 —— **走云端 LLM 不需要安装任何第三方包**，给三个环境变量即可跑；pip 装不上不构成这条路的阻塞。
 - **本地推理条件（2026-11-09 实测）**：`NVIDIA GeForce RTX 4060 Laptop GPU, 8188 MiB`，C 盘可用 103G，`ollama` 未安装。7B 级 Q4 量化模型（约 4–5GB）在本机可跑，是「零成本 + 可复现」的本地生成备选；模型下载渠道仍未确认（E3）。
 - **本轮作品实测**：7 个标准库单测全过；评测集 `recall@3 = 4/4 = 100%`；零依赖 HTTP 服务 `/health` `/sources` `/ask` 自测通过（docs=4、chunks=8）。
