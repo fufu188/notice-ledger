@@ -1,6 +1,10 @@
 # 本地工作区数据（不作为比赛提交物）
 .workbuddy/
 
+# 第三方论文全文（版权）：仅本地留存，入库只保留摘录索引
+evidence/research/*.pdf
+evidence/research/wechat-fatigue-SEARCH-2025.md
+
 # 环境变量与密钥
 .env
 .env.*
