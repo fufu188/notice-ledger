@@ -69,3 +69,28 @@
 3. 导入真实通知语料替换 DEMO 数据；扩充评测集；P-003 起每条链单独提交。
 4. 用户本人完成 ≥2 分钟 AI 协同录屏（AI 不代录）。
 
+## Session: 2026-11-09（续 2）— 依赖安装失败与降级验证（P-003）
+
+### Actions Taken
+1. `python -m venv .venv` 成功；`pip install -r requirements.txt` 经 `127.0.0.1:7897` 代理失败（`WinError 10061`），改清华镜像仍 `No matching distribution found for fastapi>=0.115`。判定当前会话网络受限，**停止重试**。
+2. 按约定降级且明确告知：新增 `app/server.py`（标准库 `http.server` 的 `/health` `/sources` `/ask`）+ `--selftest` 自启自停；FastAPI 主实现保留不动。
+3. 用 `ProxyHandler({})` 绕开沙箱注入代理对 `127.0.0.1` 的劫持。
+4. 新增 `evidence/prompts/P-003.md`（第 3 条完整 Prompt 链）。三条链齐，P-002 含官方要求的修 Bug 引导。
+
+### Test Results
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| 标准库 HTTP 服务 selftest | 三接口可用 | `/health` ok（docs=4, chunks=8）；`/sources` 4 docs；`/ask` refused=False, citations=1, hits=2 | PASS |
+| 全部单测回归 | 全过 | `Ran 7 tests ... OK` | PASS |
+| 评测集回归 | 不回退 | `recall@3 = 4/4 = 100%` | PASS |
+| FastAPI 服务层 | 需联网装依赖 | **未执行**，如实标注为未验证 | 未执行 |
+
+### Errors
+| Error | Resolution |
+|-------|------------|
+| `pip install` 经 `127.0.0.1:7897` 代理：`WinError 10061 由于目标计算机积极拒绝，无法连接` | 换清华镜像重试一次 |
+| 清华镜像仍 `No matching distribution found for fastapi>=0.115` | 判定网络受限，停止重试；降级为零依赖 HTTP 演示服务，不假装 FastAPI 已可用 |
+
+### Next
+联网环境执行 `pip install -r requirements.txt` 后运行 `uvicorn app.main:app` 验证主服务；或直接用 `python -m app.server --port 8000` 演示。
+

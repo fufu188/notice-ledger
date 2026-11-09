@@ -25,7 +25,15 @@ python -m app.cli --eval
 python -m unittest discover -s tests -v
 ```
 
-Web 服务（可选，需装依赖）：
+Web 演示（**零依赖，本机立即可跑**）：
+
+```bash
+python -m app.server --selftest     # 自启自停，验证 /health /sources /ask
+python -m app.server --port 8000    # 常驻服务
+curl -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" -d "{\"question\":\"选错组别会怎样\"}"
+```
+
+FastAPI 主实现（`app/main.py`，对应选定技术栈 Python/FastAPI）：
 
 ```bash
 python -m venv .venv
@@ -34,8 +42,10 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-浏览器打开 `http://127.0.0.1:8000/docs`，可直接试 `/health`、`/sources`、`/ask`。
-本机本地调试前需清除 `HTTP_PROXY` 环境变量（沙箱注入的代理会劫持本地请求，见 `findings.md` 第 5 节）。
+装好依赖后浏览器打开 `http://127.0.0.1:8000/docs`。
+
+> **本机实测（诚实声明）**：当前会话网络受限，`pip install` 两次失败——`127.0.0.1:7897` 代理 `WinError 10061`，改清华镜像仍 `No matching distribution found for fastapi>=0.115`。因此 **FastAPI 服务层已写但未运行验证**；上面的标准库服务是降级方案，不冒充 FastAPI 已可用。联网后按上述命令即可验证主服务，`.venv` 已建可复用。
+> 本地调试前需清除 `HTTP_PROXY`（沙箱注入的代理会劫持 `127.0.0.1` 请求，见 `findings.md` 第 5 节）。
 
 可选云端生成（D2：仅复杂分析 / 复杂任务时启用）：
 
@@ -103,6 +113,7 @@ authority: 3
 ## 当前边界（诚实声明）
 
 - 检索是**词法基线**，不是语义向量模型；embedding / 混合检索 / rerank 属后续迭代。
+- `app/main.py`（FastAPI）因依赖未装**未运行验证**；`app/server.py`（标准库降级）已自测通过。两者接口语义一致。
 - 口径差异检测是**规则基线**（日期 + 时间关键词），不是语义推理；它只提示「请核对」，不判断谁对谁错。
 - 离线回答是**抽取式**，不做生成式改写；生成能力只在配置 LLM 后启用。
 - 尚无文档导入接口、增量更新、多轮对话、前端界面。
@@ -114,11 +125,12 @@ authority: 3
 |---|---|---|
 | P-001 | 从 0 到可运行垂直切片 | 完成（无修 Bug 环节，已如实留白） |
 | P-002 | 修复口径差异误报 + 来源去重 + 2 个回归测试（含修 Bug 引导） | 完成 |
-| P-003 | 真实通知语料导入 + 评测集扩充 + 导入器 | 待做 |
-| P-004 | 向量检索 / rerank 与词法基线对比实验 | 待做 |
-| P-005 | 意图控制消融实验（去掉约束看幻觉率变化） | 待做 |
+| P-003 | 依赖安装失败后的零依赖 HTTP 降级服务 + 代理绕过 + 自启自停自测 | 完成 |
+| P-004 | 真实通知语料导入 + 评测集扩充 + 导入器 | 待做 |
+| P-005 | 向量检索 / rerank 与词法基线对比实验 | 待做 |
+| P-006 | 意图控制消融实验（去掉约束看幻觉率变化） | 待做 |
 
-> 官方要求 ≥3 条完整 Prompt 链且包含「引导 AI 修 Bug」环节。现有 2 条（P-002 已含该环节），还差 ≥1 条。修 Bug 环节只在真实出错时记录，**不虚构、不事后补写**；用户本人引导的版本建议在录屏中补录。
+> 官方要求 ≥3 条完整 Prompt 链且包含「引导 AI 修 Bug」环节。现有 3 条（**P-002 含该环节**），数量已达标；仍建议在录屏里补录一段用户本人引导修 Bug 的过程。修 Bug 环节只在真实出错时记录，**不虚构、不事后补写**。
 
 ## 官方交付物对照
 
@@ -126,7 +138,7 @@ authority: 3
 |---|---|---|
 | 代码仓库 Public + README | 可访问且含 README | 本地仓库已建、README 已写；**未关联远程、未公开**（`CONFIRM.md` D4 待确认） |
 | 细粒度 Git 历史 | 禁止一次性提交 | 已按阶段 0 / 功能切片分次提交，见 `evidence/devlog.md` |
-| AI 对话历史 ≥3 条完整链路 | 含修 Bug 引导 | `P-001`、`P-002` 已建（P-002 含修 Bug 引导），**还差 ≥1 条** |
+| AI 对话历史 ≥3 条完整链路 | 含修 Bug 引导 | `P-001` / `P-002` / `P-003` 三条已建（P-002 含修 Bug 引导），数量达标 |
 | 10 分钟极速复现指南 | 环境、依赖、环境变量模板 | 本文件初版 + `.env.example` + `requirements.txt` |
 | 5—8 分钟 1080p 视频（含 ≥2 分钟 AI 协同） | MP4 | **未开始**，须用户本人录制 |
 | ≤30 页 PDF 技术文档 | 意图控制 / 架构 / 可复现性 | **未开始** |
@@ -134,7 +146,7 @@ authority: 3
 ## 目录
 
 ```
-app/           核心代码（零依赖）+ FastAPI 薄封装
+app/           核心代码（零依赖）+ FastAPI 薄封装 + 标准库降级 HTTP 服务
 data/docs/     语料（当前为 DEMO 整理稿）
 tests/         标准库单元测试
 evidence/      过程证据：README / devlog / prompts / screenshots

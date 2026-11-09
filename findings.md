@@ -137,4 +137,6 @@
 - 已装：numpy 2.5.4、requests 2.34.2。未装：fastapi、uvicorn、pydantic、sklearn、sentence_transformers。
 - 当前会话 `HTTP_PROXY=http://127.0.0.1:5132`（交接记录的是 `127.0.0.1:8150` 会劫持本地请求）。
 - 因此最小可运行切片设计为：检索 / 冲突检测 / 回答核心**零第三方依赖**（纯标准库），FastAPI 只做薄封装层，依赖另列 `requirements.txt`。
+- **依赖安装实测（本轮新事实）**：`python -m venv .venv` 成功；`pip install -r requirements.txt` 经 `127.0.0.1:7897` 代理报 `WinError 10061 由于目标计算机积极拒绝，无法连接`，改清华镜像仍 `No matching distribution found for fastapi>=0.115` → 当前会话网络受限，无法安装第三方包。故 `app/main.py`（FastAPI 主实现）**已写但未运行验证**；新增 `app/server.py` 标准库 HTTP 演示服务作为降级，自测通过。`.venv` 保留供后续联网复用。
+- **本轮作品实测**：7 个标准库单测全过；评测集 `recall@3 = 4/4 = 100%`；零依赖 HTTP 服务 `/health` `/sources` `/ask` 自测通过（docs=4、chunks=8）。
 
