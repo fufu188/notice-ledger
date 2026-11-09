@@ -16,8 +16,7 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
-# 过程证据中的大文件（按需单独 git add -f）
-evidence/screenshots/
+# 过程证据中的大视频（截图是评审材料，必须入库）
 *.mp4
 *.mov
 
