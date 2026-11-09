@@ -94,3 +94,33 @@
 ### Next
 联网环境执行 `pip install -r requirements.txt` 后运行 `uvicorn app.main:app` 验证主服务；或直接用 `python -m app.server --port 8000` 演示。
 
+
+## Session: 2026-11-09（续 3）— 官网登录态核实（P-004）
+
+### Actions Taken
+1. 用户给出官网链接并授权：「我来登录，你去查」（对应 `CONFIRM.md` B5）。
+2. 读经验库 → 起 Edge（独立 user-data-dir + CDP 9222）→ 用户本人登录 → AI 在同一会话内读 DOM。
+3. 新增 `cdp.mjs`（Node 22 原生 WebSocket，零依赖）：targets / text / links / eval / nav / shot。
+4. 抓取并存档 7 份原文到 `evidence/official/`：首页、大赛通知、赛道卡、赛道详情、参赛流程、提交表单、个人中心。
+5. `findings.md` 新增第 0 节（核实结论 + 与交接文档差异表）；`CONFIRM.md` 更新 A1/A3/A5/A6/B1—B5/D5/E1。
+6. 把官方原文清洗成 5 条真实语料 `data/docs/official-01..05.md`（authority=3，含 source_url 与发布时间）。
+
+### Test Results
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| 单元测试 | 全过 | `Ran 7 tests ... OK` | PASS |
+| 评测集 | 不回退 | `recall@3 = 4/4 = 100%` | PASS |
+| 真实语料检索（"省赛作品提交入口在哪里"） | 召回到 official-03 的 kdocs 直链 | **未召回**，Top-2 是赛道详情页与大纲标题 | **FAIL（真实缺陷）** |
+| 答案片段完整性 | 输出小节正文 | 片段 [2] 只有标题「二、作品提交方式」 | **FAIL（切分截断）** |
+| 隐私扫描（11 位手机号 / 邮箱） | 无本人联系方式入库 | 本人手机号与邮箱已脱敏；其余为官网公开联系方式 | PASS |
+
+### Errors
+| Error | Resolution |
+|-------|------------|
+| Edge 进程被回收，CDP `fetch failed` | 同 user-data-dir 重启，登录态仍在 |
+| `Page.navigate` 后 target 匹配失败 | 改用页面内 `location.href=` 跳转 |
+| 赛道列表无独立 URL（Vue 面板） | 定位 `.item-right` + `了解更多` 进入详情页 |
+| 国赛 tab 显示「赛事尚未开启」 | 如实记录，不推测国赛细则 |
+
+### Next
+P-005：带上述两条真实失败输出，让 AI 定位「长文档 BM25 稀释」与「小节标题/正文切分」的根因并修，补回归测试。
