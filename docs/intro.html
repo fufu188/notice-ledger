@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>作品介绍文档｜校务/赛事通知可信问答助手</title>
+<style>
+@page{size:A4;margin:17mm 16mm}
+body{font-family:"Microsoft YaHei","SimSun",sans-serif;font-size:10.5pt;line-height:1.65;color:#1a1a1a}
+h1{font-size:20pt;border-bottom:2px solid #2b5c9b;padding-bottom:6pt}
+h2{font-size:14pt;color:#2b5c9b;margin:16pt 0 8pt;border-left:4px solid #2b5c9b;padding-left:8pt;page-break-after:avoid}
+h3{font-size:11.5pt;margin:10pt 0 4pt}
+p,li{margin:4pt 0}
+ul,ol{margin:5pt 0 8pt 18pt;padding:0}
+table{border-collapse:collapse;width:100%;margin:8pt 0;font-size:9pt}
+th,td{border:1px solid #bbb;padding:4pt 6pt;text-align:left;vertical-align:top}
+th{background:#eef3fa}
+code{font-family:Consolas,monospace;background:#f2f4f7;padding:0 3pt;font-size:9pt}
+.chapter{page-break-before:always}
+.cover{text-align:center;padding-top:48mm}
+.box{background:#f5f8fc;border-left:3px solid #2b5c9b;padding:7pt 10pt;margin:8pt 0}
+img{max-width:100%;border:1px solid #ccc;margin:8pt 0 4pt}
+.cap{font-size:8.5pt;color:#666;margin-bottom:10pt}
+.small{font-size:9pt;color:#555}
+</style></head><body>
+
+<div class="cover">
+<h1 style="border:none">校务 / 赛事通知可信问答助手</h1>
+<p style="font-size:12pt;color:#555">作品介绍文档 · 第九届传智杯 AI 创新应用挑战赛</p>
+<p style="font-size:11pt;color:#555">个人赛 / B 组 ｜ 参赛编号 1790778 ｜ 2026-11-09</p>
+<p style="margin-top:28mm;font-size:9.5pt;color:#666">本文档按省赛提交表单第 6 项要求的 7 个小节组织，逐项对应，不缺项、不合并。</p>
+</div>
+
+<h2>（1）项目详情及使用方式</h2>
+<p><strong>项目是什么</strong>：一个面向大学生（尤其参赛学生）的「通知口径可信裁决」系统。它不生成流畅的聊天答案，而是把校务/赛事通知拆成可逐字核查的原子断言，回答时给出<strong>结论句 + 原文片段 + 引用 + 口径差异 + 渠道对照 + 五要素卡片</strong>，并在知识库没有依据时明确拒答、说明缺口在哪、该去哪核对。</p>
+<p><strong>解决什么问题</strong>：同一赛事通知分散在官网、高校转发、个人中心、提交表单与群内声明；写法不一致、会出补充通知、关键信息藏在会过期的附件里。学生要判断「到底哪天截止」「该信哪个链接」「补充通知改了哪些条款」，采信错误口径可能直接失去参赛资格。</p>
+<p><strong>怎么使用</strong>（3 步，全程离线）：</p>
+<ol>
+<li>准备 Python 3.13；克隆仓库后执行 <code>python -m unittest discover -s tests -q</code>（35 个测试通过）。</li>
+<li>运行 <code>python -m app.server --port 8000</code>，浏览器打开 <code>http://127.0.0.1:8000/</code>；或命令行 <code>python -m app.cli "省赛作品提交截止是哪一天？"</code>。</li>
+<li>在界面输入问题，查看裁决书；点击「下载截止日历提醒 (.ics)」把截止节点导入日历；用 <code>#q=&lt;问题&gt;</code> 分享问题链接。</li>
+</ol>
+<p>不需要 API key、不需要联网、不需要安装第三方包。FastAPI 版为可选薄封装，装好 <code>requirements.txt</code> 后接口语义一致。</p>
+<img src="__SHOT1__" alt="界面空状态">
+<p class="cap">图 1　界面首页与知识库来源侧栏（截图：<code>evidence/screenshots/01-empty-state.png</code>）</p>
+
+<div class="chapter"></div>
+<h2>（2）项目的亮点</h2>
+<ol>
+<li><strong>反其道而行</strong>：不比「谁答得更像人」，比「谁的判断更经得起核查」。默认运行时不调用大模型，答案由规则层产生，天然无幻觉、可复现。</li>
+<li><strong>条款级覆盖</strong>：真实高校补充通知使用「申报方式和时间安排以本补充通知为准」「初赛复赛时间保持不变…其余按原通知执行」。系统按要求输出「哪些条款被覆盖、哪些明确沿用」，而不是把整份旧通知判为作废。</li>
+<li><strong>渠道效力层级</strong>：区分赛事表单 / 个人中心 / 官网 / 高校转发 / 群内声明 / 二手整理稿，同一事项的多种写法并列展示并给出行动影响，不擅自合并。</li>
+<li><strong>拒答会解释</strong>：不只说「不知道」，还说明「官方声明后续通知在群内发布，公开网页未收录，请核对教务处/牵头部门」，且不编造群内容或联系人。</li>
+<li><strong>证据来自外部一手资料</strong>：校方正式回复、学生来信、官方校园媒体、同行评审期刊、多校补充通知共同支撑痛点定义，而非自述。</li>
+<li><strong>可量化、可复跑</strong>：24 题人工基准集 + 10 组消融 + 固定基线对照，每个设计都能测出贡献（断言补充召回 −20.8pp、语义拒答 −12.5pp）。</li>
+<li><strong>可带走的工件</strong>：五要素卡片、RFC 5545 <code>.ics</code> 提醒、可分享问题链接，而非一次性聊天气泡。</li>
+</ol>
+<img src="__SHOT3__" alt="修复后答案截图">
+<p class="cap">图 2　有据可查的裁决结论与引用来源（截图：<code>evidence/screenshots/03-fixed-answer.png</code>）</p>
+
+<div class="chapter"></div>
+<h2>（3）AI 测试技术落地使用情况概述</h2>
+<p class="small">注：本小节标题按省赛提交表单第 6 项原文「AI测试技术落地使用情况概述」照录；此处如实说明本项目 AI 技术的实际落地方式与边界。</p>
+<table><tr><th>环节</th><th>AI 工具 / 模型</th><th>用途</th><th>是否进入运行时</th></tr>
+<tr><td>全链路开发</td><td>WorkBuddy 会话（AI 辅助编程）</td><td>从零构建检索、切分、裁决、评测、界面；9 条完整 Prompt 链含真实修 Bug 引导</td><td>否（过程证据）</td></tr>
+<tr><td>断言抽取</td><td><code>deepseek-flash</code>（DeepSeek 官方 API）</td><td>构建期把 6 份官方通知抽成 141 条原子断言，产物固化到 <code>data/claims.json</code></td><td>否，仅构建期</td></tr>
+<tr><td>字面校验</td><td>确定性规则（自研）</td><td><code>evidence_span</code> 必须逐字出现在原文，141/141 通过；未通过项保留并公开更正</td><td>是（零依赖）</td></tr>
+<tr><td>纯生成基线</td><td><code>deepseek-flash</code></td><td>作为对照实验的「对手系统」，用同一检索片段自由作答，用于证明可验证设计的价值</td><td>否，仅实验</td></tr>
+<tr><td>在线答案生成</td><td>无</td><td><code>ALLOW_ONLINE_LLM</code> 硬门禁默认关闭，杜绝幻觉与 key 依赖，保证 10 分钟复现</td><td><strong>明确不用</strong></td></tr></table>
+<p>凭据只在进程环境变量中，未写入任何文件、未进入仓库与 Git 历史；离线资产已固化，评审复现无需 key。</p>
+
+<div class="chapter"></div>
+<h2>（4）项目中涉及的关键技术</h2>
+<ul>
+<li><strong>中文 bi-gram + BM25</strong>：零第三方依赖的词法检索基线，配权威度与时效先验；可关闭的同义扩展解决「入口 vs 提交链接」词表不匹配。</li>
+<li><strong>小节标题合并切分</strong>：避免 8 字空壳标题块因短文本词频密度高而挤掉含答案解析。</li>
+<li><strong>日期归一化与口径差异检测</strong>：把多种日期写法归一键，小句级强时间词过滤，措辞为「口径差异」而非「事实矛盾」。</li>
+<li><strong>语义级拒答</strong>：断言覆盖 + BM25 分数 + 问题词项覆盖 + 金额单位检查的组合规则，配套证据缺口说明。</li>
+<li><strong>断言级补充召回</strong>：141 条已校验断言作为第二召回路径，解决数字/比例/页数类查询漏召回；补充片段用 <code>[补充N]</code> 标记，正文编号与 citation 严格一致。</li>
+<li><strong>条款级覆盖模型</strong>：<code>supersedes</code> / <code>scope</code> / <code>channel</code> / <code>as_of</code> 字段，只采用通知原文的显式效力措辞。</li>
+<li><strong>可证伪评测</strong>：人工标注基准集、确定性规则判卷、FS/PS/NS 加权归因、固定基线产物、10 组消融开关。</li>
+<li><strong>双服务架构</strong>：标准库 <code>http.server</code> 与 FastAPI 薄封装提供同一组接口；Web 界面单文件、无 CDN、无框架。</li>
+<li><strong>结构化工件</strong>：五要素规则抽取（缺失如实留白）、RFC 5545 <code>.ics</code> 本地生成（含提前 2 天 VALARM）。</li>
+</ul>
+
+<div class="chapter"></div>
+<h2>（5）项目相关的图片 / 照片</h2>
+<img src="__SHOT2__" alt="口径差异界面">
+<p class="cap">图 3　口径差异警示与引用来源（截图：<code>evidence/screenshots/02-answer-with-conflict.png</code>）</p>
+<img src="__SHOT4__" alt="裁决书与五要素卡片">
+<p class="cap">图 4　裁决句、通知五要素卡片与 .ics 下载按钮（截图：<code>evidence/screenshots/04-card-and-verdict.png</code>）</p>
+<p>四张截图均来自本机实际运行界面（无头浏览器渲染），非示意图或设计稿；原始 PNG 已随仓库归档在 <code>evidence/screenshots/</code>。</p>
+
+<div class="chapter"></div>
+<h2>（6）项目之前是否发表过或获奖，请说明</h2>
+<p><strong>未发表、未获奖、未在其他赛事提交过。</strong>本作品为本次参赛从零构建，代码、语料整理、评测集、技术文档与截图均为本项目首次产出；不存在已发表论文、已公开获奖作品或往届参赛作品复用的情况。</p>
+<p class="small">说明：项目内引用的学术资料（arXiv、期刊论文、官方通知）仅作为方法依据与需求证据，均标注来源，不属于本作品曾发表/获奖的内容。</p>
+
+<h2>（7）若项目是在其他项目基础上优化，请说明优化部分</h2>
+<p><strong>不是基于其他项目优化</strong>：未使用、未包装、未 fork 任何已有开源项目。项目从空目录开始，核心模块（<code>loader/chunker/retriever/answer/claims/context/card/server/main</code>）、评测工具、界面与文档均为本次编写。</p>
+<p>仓库内 <code>evidence/</code> 与 <code>data/</code> 中的官方通知原文、高校通知摘录属于公开资料引用，均标注来源 URL 与抓取日期；DEMO 整理稿明确标注「非官方原文」，用作权威度反例样本。外部依赖仅 FastAPI/uvicorn/pydantic（可选薄封装），已列入 <code>requirements.txt</code> 并说明安装方式。</p>
+<div class="box">与官方「严禁直接使用已有开源项目包装参赛」「开发全链路可复现」要求对应：细粒度 Git 提交历史、9 条 Prompt 链（含 5 条真实修 Bug 引导）、devlog 与评测产物共同构成可核查的原创性自证。</div>
+
+</body></html>

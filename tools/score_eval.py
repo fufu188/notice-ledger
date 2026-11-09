@@ -248,6 +248,7 @@ def main():
         "no_abstain": "拒答阈值（min_score=0）", "no_date_norm": "日期归一化",
         "no_claims": "断言补充召回（含语义拒答）",
         "no_semantic_abstain": "语义级拒答", "no_verdict": "裁决结论句",
+        "no_enrich": "渠道对照/条款覆盖/证据缺口/后果（附加区块）",
     }
     for name, s in abl_stats.items():
         d = s["accuracy"] - full["accuracy"]

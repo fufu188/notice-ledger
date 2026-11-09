@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from .answer import compose
+from .card import ics_text
 from .cli import DOCS as DOC_DIR, build
 from .llm import available, online_allowed
 
@@ -77,4 +78,6 @@ def ask(request: AskRequest):
             }
             for h in hits
         ],
+        "card": result.card,
+        "ics": ics_text(result.card) if result.card else None,
     }

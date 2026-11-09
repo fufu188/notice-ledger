@@ -1,7 +1,8 @@
 # 本地工作区数据（不作为比赛提交物）
 .workbuddy/
 
-# 第三方论文全文（版权）：仅本地留存，入库只保留摘录索引
+# 第三方论文全文与原始抓取 HTML（版权/隐私）：仅本地留存，入库只保留摘录索引
+evidence/research/*.html
 evidence/research/*.pdf
 evidence/research/wechat-fatigue-SEARCH-2025.md
 

@@ -295,3 +295,26 @@ P-008：修 D1/D2/D3，用同一基准集复跑，禁止改基准集或调阈值
 
 ### 边界
 未改动原有目标与范围；未引入新依赖；未把宏观统计或质性结论外推成本项目用户比例；所有建议须用同一 24 题基准集复跑验证。
+
+## Session: 2026-11-09（续 11）— 一路推进到可交付状态（P-009）
+
+### 完成内容
+- 资料：云南大学补充通知直取成功升为 A 级；广东微信公众号页面直取无关键正文，**主动降为旁证并剔除出语料**；修正宁波大学 URL。
+- 数据：新增 `data/channels.json`（6 级渠道/10 文档/4 跨渠道案例）、`data/coverage.json`（4 个条款级覆盖样本）、`data/campus/`（3 份脱敏摘录，不进检索）、`evidence/research/channel-gaps.md`、`docs/pain-points.md`。
+- 代码：新增 `app/context.py`（渠道对照/条款覆盖/证据缺口/后果与时效）、`app/card.py`（五要素卡片 + RFC 5545 ICS）；`answer.py`/`models.py`/`server.py`/`main.py`/前端全部接入；`no_enrich` 消融组。
+- 修复异常：后果类问句误拒（词面不重合）、ICS 的 CRCRLF、卡片抽取范围过窄、PDF 相对路径导致无输出、打包遗漏 `app/web/index.html`。
+- 交付物：`docs/technical.pdf`（14 页）、`docs/intro.pdf`（8 页，7 小节）、`docs/video-script.md`（6:30，含 2:10 AI 协同）、`docs/notice-deadline.ics`、`evidence/submission-checklist.md`、`evidence/screenshots/04-card-and-verdict.png`、`dist/notice-ledger-v1.0.zip`（85 文件）、`evidence/prompts/P-009.md`。
+
+### 最终验证
+| 检查 | 结果 |
+|---|---|
+| 编译 / 单测 | `compileall` OK；**35 个测试全过** |
+| CLI / 标准库服务 | `recall@3 6/8`、`recall@5 8/8`；`/` `/health` `/sources` `/ask` 全通 |
+| FastAPI 服务 | `/health` `/sources` `/` `/docs` 全 200；`POST /ask` 返回 card + ics |
+| 基准集复跑 | 66.7% / 应拒尽拒 100% / 冲突感知 37.5% / 归因 93.2% / 错误口径采信 12.5%，**与优化前完全一致无回退** |
+| 消融 | 10 组；`no_claims -20.8pp`、`no_semantic_abstain -12.5pp`，其余如实记 0pp |
+| PDF / ICS / 打包 | 14 页与 8 页（≤30）；ICS CRLF 19、CRCRLF 0；zip 85 文件含界面 HTML |
+| 隐私 | 工作区文本扫描无真实 key / 手机号 / 邮箱；原始抓取 HTML 已删除并加入 .gitignore |
+
+### 交付边界
+AI 侧全部完成；仅剩三项物理上须用户本人执行：Public 仓库地址与推送、本人录屏上传、WPS 表单正式提交。三者前置产物已齐备（见 `evidence/submission-checklist.md`），非待确认事项。

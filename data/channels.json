@@ -1,0 +1,165 @@
+{
+  "version": "v1",
+  "created_at": "2026-11-09",
+  "note": "channel 为人工按官网/高校一手页面核实后标注；authority 沿用语料 frontmatter，不另造权重。",
+  "levels": [
+    {
+      "rank": 1,
+      "key": "official_form",
+      "label": "赛事提交表单",
+      "desc": "直接决定能否提交，值最精确（含秒级时间）"
+    },
+    {
+      "rank": 2,
+      "key": "official_personal",
+      "label": "赛事个人中心/参赛流程",
+      "desc": "登录后按赛项个性化展示，含实操直链"
+    },
+    {
+      "rank": 3,
+      "key": "official_site",
+      "label": "赛事官网通知/赛道详情",
+      "desc": "面向全体选手的通用口径"
+    },
+    {
+      "rank": 4,
+      "key": "campus_forward",
+      "label": "高校转发通知",
+      "desc": "二级学院/教务处转发，可能滞后或措辞简化"
+    },
+    {
+      "rank": 5,
+      "key": "group_notice",
+      "label": "群内/公众号通知",
+      "desc": "官方声明后续在此发布，公开网页不可核验"
+    },
+    {
+      "rank": 6,
+      "key": "second_hand",
+      "label": "二手整理稿",
+      "desc": "自述非官方原文，仅作反例样本"
+    }
+  ],
+  "docs": {
+    "official-01": {
+      "channel": "official_site",
+      "label": "大赛通知页",
+      "note": "2026-11-03 发布的省赛提交通道通知"
+    },
+    "official-02": {
+      "channel": "official_site",
+      "label": "赛道详情页",
+      "note": "通用文案，含国赛安排与奖项比例"
+    },
+    "official-03": {
+      "channel": "official_personal",
+      "label": "个人中心参赛流程",
+      "note": "登录态页面，含 kdocs 直链"
+    },
+    "official-04": {
+      "channel": "official_form",
+      "label": "WPS 提交表单",
+      "note": "字段说明与精确到秒的截止时间"
+    },
+    "official-05": {
+      "channel": "official_site",
+      "label": "赛道详情页（评分/奖项）",
+      "note": "同页两处比例不一致"
+    },
+    "official-06": {
+      "channel": "official_site",
+      "label": "赛道详情页（提交要求）",
+      "note": "视频/文档/仓库要求"
+    },
+    "demo-01": {
+      "channel": "second_hand",
+      "label": "DEMO 整理稿",
+      "note": "非官方原文"
+    },
+    "demo-02": {
+      "channel": "second_hand",
+      "label": "DEMO 整理稿",
+      "note": "非官方原文"
+    },
+    "demo-03": {
+      "channel": "second_hand",
+      "label": "DEMO 整理稿",
+      "note": "非官方原文"
+    },
+    "demo-04": {
+      "channel": "second_hand",
+      "label": "DEMO 整理稿",
+      "note": "非官方原文"
+    }
+  },
+  "cross_channel_cases": [
+    {
+      "topic": "报名起始时间",
+      "values": [
+        {
+          "value": "2026-07-29",
+          "channel": "official_site",
+          "doc_id": "official-02"
+        },
+        {
+          "value": "2026-09-01",
+          "channel": "campus_forward",
+          "doc_id": "campus-xjtu"
+        }
+      ],
+      "verdict": "两者均为公开一手表述，赛事官网为原始口径；高校转发为校内组织口径，不影响已完成报名者。",
+      "action_impact": "低"
+    },
+    {
+      "topic": "省赛提交入口",
+      "values": [
+        {
+          "value": "https://f.kdocs.cn/g/CZ14BoMv/",
+          "channel": "official_form",
+          "doc_id": "official-04"
+        },
+        {
+          "value": "缴费后个人中心查看，不再单独提供外部链接",
+          "channel": "official_site",
+          "doc_id": "official-02"
+        }
+      ],
+      "verdict": "以登录态参赛流程页给出的直链为实操入口；通用文案为模板化说明。",
+      "action_impact": "高"
+    },
+    {
+      "topic": "报名官网链接",
+      "values": [
+        {
+          "value": "https://www.boxuegu.com/match/",
+          "channel": "official_site",
+          "doc_id": "official-01"
+        },
+        {
+          "value": "http://dasai.ityxb.com/",
+          "channel": "campus_forward",
+          "doc_id": "campus-xjtu"
+        }
+      ],
+      "verdict": "两个链接均出现在官方/高校通知中，属入口别名，不构成截止口径冲突。",
+      "action_impact": "中"
+    },
+    {
+      "topic": "国赛二等奖比例",
+      "values": [
+        {
+          "value": "20%",
+          "channel": "official_site",
+          "doc_id": "official-05"
+        },
+        {
+          "value": "25%",
+          "channel": "official_site",
+          "doc_id": "official-05"
+        }
+      ],
+      "verdict": "同一官方页面自相矛盾，不擅自选定，须并列并向组委会核对。",
+      "action_impact": "低"
+    }
+  ]
+}

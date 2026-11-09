@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>技术文档｜校务/赛事通知可信问答助手</title>
+<style>
+@page{size:A4;margin:17mm 16mm}
+body{font-family:"Microsoft YaHei","SimSun",sans-serif;font-size:10.5pt;line-height:1.62;color:#1a1a1a}
+h1{font-size:19pt;border-bottom:2px solid #2b5c9b;padding-bottom:6pt;margin:0 0 14pt}
+h2{font-size:14pt;color:#2b5c9b;margin:16pt 0 8pt;border-left:4px solid #2b5c9b;padding-left:8pt}
+h3{font-size:11.5pt;margin:11pt 0 5pt}
+p{margin:5pt 0}
+ul,ol{margin:5pt 0 8pt 18pt;padding:0}
+li{margin:3pt 0}
+table{border-collapse:collapse;width:100%;margin:8pt 0;font-size:9pt}
+th,td{border:1px solid #bbb;padding:4pt 6pt;text-align:left;vertical-align:top}
+th{background:#eef3fa}
+code{font-family:Consolas,monospace;background:#f2f4f7;padding:0 3pt;font-size:9pt}
+.chapter{page-break-before:always}
+.cover{text-align:center;padding-top:55mm}
+.cover .sub{color:#555;font-size:11pt;margin-top:10pt}
+.meta{margin-top:25mm;font-size:9.5pt;color:#444;line-height:1.9}
+.small{font-size:9pt;color:#555}
+.box{background:#f5f8fc;border-left:3px solid #2b5c9b;padding:7pt 10pt;margin:8pt 0}
+.warn{background:#fff8e8;border-left:3px solid #c8911d;padding:7pt 10pt;margin:8pt 0}
+img{max-width:100%;border:1px solid #ccc;margin:8pt 0}
+.foot{margin-top:14pt;font-size:8.5pt;color:#666;border-top:1px solid #ddd;padding-top:6pt}
+</style></head><body>
+
+<div class="cover">
+<h1 style="border:none">校务 / 赛事通知可信问答助手</h1>
+<div class="sub">技术文档 · 第九届传智杯 AI 创新应用挑战赛（个人赛 / B 组）</div>
+<div class="sub">从「能回答」到「可被审计的判断」</div>
+<div class="meta">
+作品版本：v1.0（2026-11-09）<br>
+技术栈：Python 3.13 标准库核心 + FastAPI 薄封装（可选）<br>
+核心约束：运行时零第三方依赖、零 API key、零联网<br>
+文档页数：见目录，全文不超过 30 页（官方要求）
+</div>
+</div>
+
+<h2>摘要</h2>
+<p>本项目不做一个「更流畅的通知问答机器人」，而做一个<strong>对多源通知口径作出可证伪裁决、且全过程可复现</strong>的系统。它面向的真实痛点是：同一赛事的通知分散在官网、高校转发、个人中心、提交表单和群内声明等多个渠道，写法不一致、会出补充通知、关键信息藏在会过期的附件里；学生据此判断「到底哪天截止」「该信哪个链接」时，一旦采信被排除的口径就可能失去参赛资格。</p>
+<p>系统的技术选择因此与常见 RAG 相反：<strong>默认不生成答案</strong>，而是把通知拆成带原文逐字校验的原子断言，用规则层做检索、裁决、拒答与引用，把 LLM 严格限制在离线构建期与对照组。这样换来的是可核查性、可复现性与零依赖，而不是文采。</p>
+<div class="box"><strong>本文三主题</strong>：第 4 章「意图控制策略」、第 5 章「架构设计」、第 8 章「可复现性论证」，均为官方提交要求点名的重点。</div>
+
+<h2>目录</h2>
+<ol>
+<li>真实痛点与需求证据</li><li>作品定位与创新点</li><li>数据资产与语料构建</li>
+<li>意图控制策略</li><li>架构设计</li><li>功能与界面</li>
+<li>评测体系：基准集、消融与对照实验</li><li>可复现性论证</li>
+<li>局限性与诚实边界</li><li>评审维度映射与交付物</li>
+</ol>
+
+<div class="chapter"></div>
+<h1>1. 真实痛点与需求证据</h1>
+<p>项目的痛点不是自述的。2026-11-09 共核实 12 项一手资料，下列为最关键的四类证据；完整索引与逐字摘录见 <code>evidence/research/README.md</code>，可信度分级与剔除清单见 <code>OPTIMIZATION.md</code>。</p>
+
+<h3>1.1 校方正式承认信息分散（A+）</h3>
+<p>池州学院校长信箱 2026-10-10 收到学生来信：「大量由二级学院、实验室或社团牵头的赛事信息处于『隐形』状态，导致普通学生错失参赛机会，形成了『信息垄断』」，建议「建立年度竞赛总览方案并挂网公示，明确牵头部门/学院、具体联系人及时间节点」。教务处 2026-10-13 正式回复：「针对赛事信息分散问题，教务处将进一步统筹…集中公示赛事主办单位、联系人、时间安排等信息，拓宽赛事信息获取渠道」，并承诺「统一校内认定口径」。</p>
+<p class="small">来源：https://www.czu.edu.cn/xjxq.jsp?urltype=leadermail.LeaderMailContentUrl&amp;wbtreeid=1069&amp;leadermailid=cghp ｜时效 2026-10｜可信度 A+（校方官网正式往来）</p>
+
+<h3>1.2 官方校园媒体给出可产品化的字段原型（A-）</h3>
+<p>中国大学生在线 2026-10-07《读懂学校通知是大学生的必修课》指出：通知分散于「班级群 / 学校·学院公众号 / 教务处网站 / 学生手册」；读通知要「圈出关键信息，时间、地点、对象、要求、截止时间」；「真正的干货是在附件里…以免文件过期，无法查看」；「凡是带截止时间的，马上写在手机日历或带有提前提醒的 APP 里」；「截止时间过了，你没注意，机会就错过了」。</p>
+<p>本项目据此把「五要素」做成结构化卡片，并提供本地生成的 <code>.ics</code> 日历提醒；对附件与链接只做保守状态标记，不猜测有效期。</p>
+<p class="small">来源：https://xyh.univs.cn/a/xyh_xyh_zhrj/261007/2057146.shtml ｜时效 2026-10-07｜可信度 A-（官方平台原创经验文章，非调查数据，不作为统计比例）</p>
+
+<h3>1.3 条款级部分覆盖是真实语义，而非设想（A）</h3>
+<p>多所高校的「补充/调整通知」使用显式效力措辞：</p>
+<ul>
+<li>宁波大学 2026-11-07：「参赛对象、作品类别、参赛资格及其他未尽事项，按学院原竞赛通知及学校相关要求执行；<strong>申报方式和时间安排以本补充通知为准</strong>」。</li>
+<li>温州大学 2026-10-22：「<strong>初赛、复赛时间保持不变</strong>…决赛竞赛形式、参赛人员配置、题型设置、奖项设置…均不作调整，按照原通知执行」。</li>
+<li>云南大学：「参赛作品提交截止时间调整为…；<strong>参赛报名截止时间仍按原通知执行</strong>」，并明确「后续评审、答辩及作品提交等相关通知将在群内发布」。</li>
+</ul>
+<p>这说明普通 RAG 的「整份文档检索 + 并列展示」不足以表达真实效力关系：覆盖是<strong>条款级</strong>的，必须同时输出「哪些条款被覆盖」与「哪些明确沿用」。</p>
+
+<h3>1.4 信息过载与错过焦虑有学术实证（A，质性）</h3>
+<p>SEARCH 17(2), 2025 期刊论文（辽宁高校学生微信日记研究）指出：「Information overload emerged as a core trigger of WeChat fatigue, particularly in high-density group communication environments such as university classes, internship groups, and administrative announcements」；<code>@all</code> 穿透免打扰造成失控感；受访者日记原句「Some of the important information is topped off!」；任务信息持续流入造成 hyper-responsiveness 与「fearing they might miss important instructions」的慢性焦虑。</p>
+<p class="warn">适用边界：质性日记研究，样本为辽宁高校学生，<strong>不外推为全国比例</strong>；仅用于解释「为何要降低阅读负担、为何拒答要给出下一步指引」。</p>
+
+<h3>1.5 项目自身的一手证据（A+）</h3>
+<p>备赛过程中，2026-11-09 登录态抓取的官网原文即出现多重口径：省赛提交截止 11-18 15:00（大赛通知页与提交表单双重确认）；参赛流程页给出 kdocs 直链，而赛道详情页写「缴费后个人中心查看，不再单独提供外部链接」；国赛二等奖同页写 20% 与 25%、三等奖写 35% 与 30%；官网报名期写 7-29 起，高校转发通知写 9-1 起。<strong>用户本人就是受影响用户</strong>。</p>
+
+<div class="chapter"></div>
+<h1>2. 作品定位与创新点</h1>
+<table><tr><th>维度</th><th>普通 RAG</th><th>本作品</th></tr>
+<tr><td>输出形态</td><td>生成一段流畅答案</td><td>裁决书：结论句 + 原文片段 + 引用 + 口径差异 + 渠道对照 + 五要素卡片</td></tr>
+<tr><td>检索单位</td><td>文本块</td><td>文本块 + <strong>原子断言</strong>（141 条，逐字回查原文）</td></tr>
+<tr><td>冲突处理</td><td>并列列出 / 交给模型总结</td><td>显式规则裁决 + 条款级覆盖 + 不擅自合并</td></tr>
+<tr><td>无依据时</td><td>可能编造</td><td>拒答 + <strong>证据缺口说明</strong>（为什么查不到、去哪核对）</td></tr>
+<tr><td>过程证据</td><td>无</td><td>基准集 + 消融矩阵 + 细粒度 Git + 9 条 Prompt 链</td></tr>
+<tr><td>运行时依赖</td><td>向量库 / LLM / key</td><td>标准库零依赖；LLM 仅离线构建与对照组</td></tr></table>
+
+<h3>五个核心创新点</h3>
+<ol>
+<li><strong>断言级时态台账</strong>：每条通知拆成带 <code>effective_from</code> / <code>channel</code> / <code>supersedes</code> / <code>scope</code> 的原子断言，只信任逐字回查过原文的条目。</li>
+<li><strong>口径裁决而非冲突提示</strong>：按权威度 → 发布时点 → 官方原文 → 二手整理稿的显式规则排序，输出「排序最高的来源记载为…」，并声明「其余口径未作合并裁定」。</li>
+<li><strong>可证伪基准集</strong>：24 题人工标注，含负样本（同日异写）、应拒答题、附注多跳题；标准答案不由 LLM 生成，判卷只用确定性规则。</li>
+<li><strong>反事实消融矩阵</strong>：10 组开关，量化每个设计的贡献（见第 7 章）。</li>
+<li><strong>裁决书式输出</strong>：可审阅、可下载（<code>.ics</code>）、可分享（<code>#q=</code>），而非聊天气泡。</li>
+</ol>
+
+<div class="chapter"></div>
+<h1>3. 数据资产与语料构建</h1>
+<table><tr><th>资产</th><th>规模</th><th>构建方式</th><th>校验</th></tr>
+<tr><td><code>data/docs/official-01..06.md</code></td><td>6 份官方原文</td><td>2026-11-09 登录态抓取（官网通知页 / 赛道详情 / 个人中心参赛流程 / WPS 表单）</td><td>原文逐字存档于 <code>evidence/official/</code>，本人联系方式已脱敏</td></tr>
+<tr><td><code>data/docs/demo-01..04.md</code></td><td>4 份 DEMO</td><td>交接文档整理稿，标注「非官方原文」</td><td>authority=2，作为反例样本演示「二手稿不得凌驾官方」</td></tr>
+<tr><td><code>data/claims.json</code></td><td>141 条断言</td><td><code>deepseek-flash</code> 离线抽取，仅构建期调用</td><td><code>evidence_span</code> 必须是原文连续子串，<strong>141/141 通过</strong>；2 条未通过项保留在 v1 记录并公开更正</td></tr>
+<tr><td><code>data/benchmark-v1.json</code></td><td>24 题 / 7 类</td><td>人工标注：必含值、禁用值、gold 文档、冲突文档、拒答标记、原文回指</td><td>标准答案不由 LLM 生成；同一基准集复跑，不刷题</td></tr>
+<tr><td><code>data/channels.json</code></td><td>6 级渠道 / 10 份文档 / 4 个跨渠道案例</td><td>按官网与高校一手页面人工标注</td><td>每条可回溯到公开 URL</td></tr>
+<tr><td><code>data/coverage.json</code></td><td>4 个条款级覆盖样本</td><td>只采用通知原文显式效力措辞</td><td>不推断、不把整份旧通知判为作废</td></tr>
+<tr><td><code>data/campus/</code></td><td>3 份高校摘录</td><td>西交大 / 韩山师范 / 三校补充通知</td><td>电话、邮箱、群号脱敏；<strong>不进入检索语料</strong>，仅作证据</td></tr></table>
+
+<div class="box"><strong>隐私边界</strong>：公开仓库不含真实手机号、邮箱、API key；<code>evidence/official/raw-process.txt</code> 已脱敏；<code>git log -S"sk-"</code> 复核为空。</div>
+
+<div class="chapter"></div>
+<h1>4. 意图控制策略（官方点名主题一）</h1>
+<h3>4.1 五条硬约束</h3>
+<p><code>SYSTEM_PROMPT</code> 明确：只能依据提供片段作答、禁止编造日期/比例/金额/编号；每个结论标注来源编号；口径不一致须并列且禁止擅自选定；资料不足只输出「知识库中没有可靠依据」；转述用「据资料记载」，不把整理稿写成官方定论。</p>
+<p>关键在于：<strong>这些约束不依赖模型自觉</strong>。默认运行时 <code>ALLOW_ONLINE_LLM</code> 硬门禁关闭，答案由规则层产生；LLM 只在离线构建期抽取断言、以及作为被测的「纯生成基线」出现。</p>
+
+<h3>4.2 显式规则表（可关闭、可消融）</h3>
+<table><tr><th>规则</th><th>触发</th><th>行为</th><th>消融开关</th></tr>
+<tr><td>权威度 / 时效加权</td><td>每次检索</td><td>score × f(authority) × f(recency)</td><td><code>no_authority</code> / <code>no_recency</code></td></tr>
+<tr><td>同义扩展</td><td>「入口」vs「提交链接」</td><td>7 组领域同义词，权重 0.45</td><td><code>no_expansion</code></td></tr>
+<tr><td>日期归一化</td><td>口径差异检测</td><td>2026-11-18 / 2026年11月18日 / 2026-11-18 15:00:00 归一键</td><td><code>no_date_norm</code></td></tr>
+<tr><td>语义级拒答</td><td>主题未被覆盖 / 问金额但无金额证据</td><td>拒答 + 证据缺口说明</td><td><code>no_semantic_abstain</code></td></tr>
+<tr><td>断言补充召回</td><td>数字、比例、页数类查询</td><td>从 141 条断言补原文片段，用 [补充N] 标记</td><td><code>no_claims</code></td></tr>
+<tr><td>裁决结论句</td><td>正常作答</td><td>照录最高排序来源原句，声明不合并口径</td><td><code>no_verdict</code></td></tr>
+<tr><td>附加证据区块</td><td>渠道/条款/后果/缺口触发词</td><td>渠道对照、条款级覆盖、证据缺口、决策后果与时效</td><td><code>no_enrich</code></td></tr></table>
+
+<h3>4.3 拒答边界的两次修正（真实过程）</h3>
+<p>初版只在「检索结果为空」时拒答，导致问「省赛答辩在哪天」时把「报名截止」片段硬答。修复采用两条通用规则（断言分 &lt; 1.0 且 top1 &lt; 12 且首位片段覆盖率 &lt; 0.30；问金额但证据无金额单位）。随后最终验证又发现自引入回归「选错组别会怎样」被误拒，补入覆盖率保护。阈值来自 24 题分数分布，属<strong>可复现的经验阈值</strong>，并全部做成可关闭开关。</p>
+
+<div class="chapter"></div>
+<h1>5. 架构设计（官方点名主题二）</h1>
+<h3>5.1 分层</h3>
+<ol>
+<li><strong>数据层</strong>：<code>loader.py</code> 读 frontmatter 文档；<code>chunker.py</code> 做段落切分，并把小节标题并入正文（避免 8 字空壳块在 BM25 里挤掉含答案解析）；<code>claims.py</code> 建断言索引。</li>
+<li><strong>检索层</strong>：<code>retriever.py</code> 中文 bi-gram + BM25 + 权威度/时效先验 + 可关闭同义扩展。</li>
+<li><strong>裁决层</strong>：<code>answer.py</code> 去重、语义拒答、口径差异检测、裁决句、原文片段与补充片段编号分离；<code>context.py</code> 提供渠道对照、条款级覆盖、证据缺口、决策后果与时效状态。</li>
+<li><strong>工件层</strong>：<code>card.py</code> 生成五要素卡片与 RFC 5545 <code>.ics</code>。</li>
+<li><strong>服务层</strong>：<code>server.py</code>（标准库，零依赖）与 <code>main.py</code>（FastAPI，可选）提供同一组接口 <code>/health</code> <code>/sources</code> <code>/ask</code> <code>/</code>，行为一致。</li>
+<li><strong>界面层</strong>：<code>web/index.html</code> 单文件、无 CDN、无框架、深色主题、响应式。</li>
+</ol>
+
+<h3>5.2 一个关键设计：正文编号与 citation 严格一致</h3>
+<p>补充断言片段若占用 <code>[2][3]</code> 编号而 citation 列表并无对应项，等于伪造溯源。系统因此把补充片段固定标为 <code>[补充1]/[补充2]</code>，正文 <code>[1][2][3]</code> 只对应 <code>citations</code> 中的条目，并有专门回归测试锁死。</p>
+
+<h3>5.3 双服务与依赖边界</h3>
+<p>官方要求 10 分钟极速复现。核心全部使用 Python 标准库，裸 Python 即可运行 <code>python -m app.server --port 8000</code>；FastAPI 版在联网装齐依赖后可用，二者接口语义一致。本会话中 <code>pip</code> 的 simple index 请求被代理拦截（403），改用 PyPI JSON API 直连下 wheel + <code>--no-index --find-links</code> 离线装齐并完成全端点实测；<code>.wheels/</code> 已加入 <code>.gitignore</code>，不进仓库。</p>
+
+<div class="chapter"></div>
+<h1>6. 功能与界面</h1>
+<p>界面包含：知识库来源侧栏（标题 / 权威度 / 发布时间 / 原文链接）、问题输入与示例快捷按钮、裁决结论句、原文片段与补充片段、引用来源、口径差异黄色警示、<strong>通知五要素卡片</strong>（时间 / 地点 / 对象 / 要求 / 截止时间，缺失字段如实标「原文未明确」）、<strong>下载 .ics 日历提醒</strong>、拒答状态与耗时统计、可分享的 <code>#q=</code> 问题链接。</p>
+<img src="__SHOT__" alt="界面截图：裁决句、五要素卡片与引用来源">
+<p class="small">截图存档：<code>evidence/screenshots/04-card-and-verdict.png</code>。另有 01 空状态、02 口径差异、03 修复后答案三张。</p>
+
+<h3>6.1 证据缺口与渠道对照（真实输出示例）</h3>
+<div class="box">问「省赛答辩安排在哪一天？」→「知识库中没有可靠依据（检索片段与断言资产均未覆盖问题的核心对象）…【证据缺口】公开网页未收录该事项；多份高校通知明示『后续通知将在群内发布』，请核对本校报名群 / 教务处 / 牵头部门联系人，不要以非官方转述为准。」</div>
+<p>系统只引用官方原文的<strong>渠道声明</strong>，不抓取群消息、不虚构联系人、不编造群内内容。</p>
+
+<div class="chapter"></div>
+<h1>7. 评测体系：基准集、消融与对照实验</h1>
+<h3>7.1 指标口径均有出处</h3>
+<table><tr><th>指标</th><th>来源</th></tr>
+<tr><td>归因可核查率（FS=1.0 / PS=0.5 / NS=0 加权）</td><td>TREC 2024 RAG 支持度评测，arXiv:2504.15205（SIGIR 2025）</td></tr>
+<tr><td>引用完整性</td><td>ALCE，arXiv:2305.14627（EMNLP 2023）</td></tr>
+<tr><td>冲突感知 / 逐文档标注</td><td>ConflictScore，arXiv:2606.26437（2026-06）简化版</td></tr>
+<tr><td>hallucination / noise sensitivity 命名</td><td>RAGChecker，arXiv:2408.08067（NeurIPS 2024 D&amp;B）</td></tr>
+<tr><td>冲突类型只做 inter-context</td><td>Knowledge Conflicts for LLMs: A Survey，arXiv:2403.08319</td></tr></table>
+<p class="warn"><strong>LLM 不作裁判</strong>：TREC SIGIR 2025 报告人类与 GPT-4o 三级判断完全一致率仅 56%→72%，因此基准集人工标注、判卷只用确定性规则；纯生成 LLM 仅作被测对象。</p>
+
+<h3>7.2 主对照（固定基线产物，可复跑）</h3>
+<table><tr><th>指标</th><th>修复前</th><th>修复后</th><th>纯生成基线</th></tr>
+<tr><td>结论正确率</td><td>45.8%</td><td><strong>66.7%</strong></td><td>66.7%</td></tr>
+<tr><td>应拒尽拒率</td><td>0.0%</td><td><strong>100.0%</strong></td><td>100.0%</td></tr>
+<tr><td>冲突感知率</td><td>12.5%</td><td><strong>37.5%</strong></td><td>37.5%</td></tr>
+<tr><td>错误口径采信率</td><td>16.7%</td><td>12.5%</td><td><strong>8.3%</strong></td></tr>
+<tr><td>归因可核查率</td><td>97.7%</td><td><strong>93.2%</strong></td><td>79.5%</td></tr></table>
+<p>检索层：<code>recall@3 = 6/8 (75%)</code>、<code>recall@5 = 8/8 (100%)</code>；单测 <strong>35 个全过</strong>。</p>
+
+<h3>7.3 消融矩阵（Δ 相对 full）</h3>
+<table><tr><th>关闭项</th><th>结论正确率</th><th>Δ</th><th>解读</th></tr>
+<tr><td>full</td><td>66.7%</td><td>—</td><td>基线配置</td></tr>
+<tr><td>no_claims</td><td>45.8%</td><td><strong>-20.8pp</strong></td><td>断言补充召回贡献最大</td></tr>
+<tr><td>no_semantic_abstain</td><td>54.2%</td><td><strong>-12.5pp</strong></td><td>语义拒答有效</td></tr>
+<tr><td>no_date_norm</td><td>66.7%</td><td>0pp</td><td>对正确率无影响，但全题冲突总数 27→30（归一化减少 3 条误报）</td></tr>
+<tr><td>no_authority</td><td>66.7%</td><td>0pp</td><td>对正确率无影响，冲突总数 27→32（抑制 5 条噪声）</td></tr>
+<tr><td>no_expansion / no_abstain / no_verdict / no_enrich</td><td>66.7%</td><td>0pp</td><td><strong>如实记录「本基准集上无可观测影响」</strong>，不硬造差异</td></tr></table>
+<p class="small">完整表格见 <code>evidence/eval-report.md</code>；实验产物 <code>evidence/baseline/run-001.json</code>、<code>evidence/ablation/table.json</code>。</p>
+
+<h3>7.4 一次公开更正</h3>
+<p>首版判卷把 2 条落在 frontmatter 元数据里的断言误报为「模型编造」，实为提示词未禁抽元数据 + 校验器只比对正文。v1 记录原样保留（<code>evidence/claims-build-v1.md</code>），修正后重跑 141/141。系统不只校验 LLM 输出，也校验自己的判定器。</p>
+
+<div class="chapter"></div>
+<h1>8. 可复现性论证（官方点名主题三）</h1>
+<h3>8.1 10 分钟复现路径</h3>
+<ol>
+<li>克隆 Public 仓库，使用 Python 3.13（无需虚拟环境）。</li>
+<li><code>python -m unittest discover -s tests -q</code> → 35 个测试通过。</li>
+<li><code>python -m app.cli --eval</code> → <code>recall@3 6/8</code>、<code>recall@5 8/8</code>。</li>
+<li><code>python -m app.server --port 8000</code> → 浏览器打开 <code>http://127.0.0.1:8000/</code>。</li>
+<li>全程<strong>不需要 API key、不需要联网、不需要安装第三方包</strong>；<code>data/claims.json</code> 与基准集均已固化入库。</li>
+</ol>
+<p>可选：<code>.env.example</code> 提供环境变量模板；<code>ALLOW_ONLINE_LLM</code> 默认关闭，即便传入 <code>--llm</code> 也不会发出云端请求（实测 <code>LLM降级=True</code>）。FastAPI 版需 <code>requirements.txt</code>，装好后 <code>uvicorn app.main:app</code>，接口与标准库版一致。</p>
+
+<h3>8.2 过程可复现的三重证据</h3>
+<ul>
+<li><strong>细粒度 Git</strong>：每次提交对应一个功能模块或一次真实修复，禁止一次性全量提交；<code>evidence/devlog.md</code> 逐条回填 commit 与验证结果。</li>
+<li><strong>Prompt 链</strong>：9 条完整链路（P-001~P-009），其中 P-002、P-005、P-006、P-007、P-008 含真实出错后的修 Bug 引导；不虚构、不事后补写。</li>
+<li><strong>实验可重跑</strong>：<code>tools/run_eval_v1.py</code> 支持 <code>EVAL_REUSE_BASELINE=1</code> 固定基线产物；<code>tools/score_eval.py</code> 用确定性规则判卷，报告可复现。</li>
+</ul>
+
+<h3>8.3 原创性自证</h3>
+<p>作品从零构建，核心检索、切分、裁决、拒答、评测、界面均为本项目编写；未直接使用任何已有开源项目包装参赛。唯一外部运行资产是已固化并逐字校验的断言数据与公开通知原文；第三方框架仅 FastAPI 作为可选薄封装。依赖清单、环境变量模板、10 分钟指南齐备。</p>
+
+<div class="chapter"></div>
+<h1>9. 局限性与诚实边界</h1>
+<ul>
+<li><strong>不宣称超越生成基线</strong>：修复后结论正确率与纯生成基线持平（66.7%），错误口径采信率 12.5% 仍高于基线 8.3%；生成基线在综合表述上仍有优势。</li>
+<li>判卷是确定性关键词匹配，语义等价但措辞不同的表述可能被误判，数值是<strong>下界</strong>；结论只适用这 24 题与当前 10 份语料，不代表泛化能力或评审分数。</li>
+<li>语义拒答阈值（1.0 / 12 / 0.30）来自该基准集分数分布，换语料需重新标定；已做成可关闭开关。</li>
+<li>检索是词法基线，不是语义向量模型；URL 类长 token 的召回仍弱，未引入向量库或 rerank。</li>
+<li>口径差异检测是规则基线（强时间词 + 日期），不识别无日期的语义级矛盾；措辞始终为「口径差异」而非「事实矛盾」。</li>
+<li>S1/S2 的宏观统计、S11 的质性结论均标注了样本与适用条件，<strong>未外推为本作品用户比例</strong>。</li>
+<li>未接入群消息、未猜测附件有效期、未虚构联系人或金额；所有「原文未明确」字段如实留白。</li>
+</ul>
+
+<div class="chapter"></div>
+<h1>10. 评审维度映射与交付物</h1>
+<table><tr><th>官方维度</th><th>权重</th><th>本作品落点</th></tr>
+<tr><td>过程可复现性与演进链路</td><td>25%</td><td>细粒度 Git、9 条 Prompt 链、基准集 + 消融 + 评测报告、10 分钟复现</td></tr>
+<tr><td>解题有效性与实用价值</td><td>25%</td><td>12 项一手需求证据、真实 11-18 口径事件、裁决书 + 后果 + 时效状态</td></tr>
+<tr><td>方法创新性与意图控制</td><td>20%</td><td>断言台账、条款级覆盖、渠道效力层级、显式规则表与拒答边界、消融证明</td></tr>
+<tr><td>工程质量与架构设计</td><td>15%</td><td>分层解耦、零依赖核心、双服务一致、编号与 citation 一致性测试</td></tr>
+<tr><td>用户体验与产品精细度</td><td>15%</td><td>裁决书界面、五要素卡片、ICS 下载、拒答态与耗时、移动端响应式</td></tr></table>
+
+<h3>提交物清单</h3>
+<ul>
+<li>代码仓库（GitHub/Gitee Public，含细粒度提交历史与 README）</li>
+<li>完整作品文件网盘链接（源码 + 文档 + 证据，含提取码）</li>
+<li>作品介绍文档（7 项要求，单文件 ≤100MB）</li>
+<li>演示视频链接（5–8 分钟 MP4 1080p，含 ≥2 分钟 AI 协同复现，B 站/抖音公开链接）</li>
+<li>技术文档（本文，PDF ≤30 页）</li>
+</ul>
+<div class="foot">文档生成：2026-11-09 由 HTML 经无头浏览器打印为 PDF；页数由 pdfplumber 校验。所有数字均可在 <code>evidence/</code> 对应产物中复验。</div>
+</body></html>

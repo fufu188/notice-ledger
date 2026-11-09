@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .answer import compose
+from .card import ics_text
 from .cli import DOCS, build
 from .llm import available, online_allowed
 
@@ -109,6 +110,8 @@ class Handler(BaseHTTPRequestHandler):
                 {"chunk_id": h.chunk.chunk_id, "title": h.chunk.doc.title, "score": h.score}
                 for h in hits
             ],
+            "card": result.card,
+            "ics": ics_text(result.card) if result.card else None,
         })
 
 

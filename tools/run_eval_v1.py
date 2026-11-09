@@ -28,7 +28,7 @@ ABL_OUT = ROOT / "evidence" / "ablation" / "table.json"
 
 FULL = dict(authority_weight=0.15, recency_tau=540, expand=True,
             min_score=0.35, normalize_dates=True,
-            use_claims=True, semantic_abstain=True, verdict=True)
+            use_claims=True, semantic_abstain=True, verdict=True, enrich=True)
 ABLATIONS = {
     "full": {},
     "no_authority": {"authority_weight": 0.0},
@@ -39,6 +39,7 @@ ABLATIONS = {
     "no_claims": {"use_claims": False, "semantic_abstain": False},
     "no_semantic_abstain": {"semantic_abstain": False},
     "no_verdict": {"verdict": False},
+    "no_enrich": {"enrich": False},
 }
 
 BASELINE_SYSTEM = (
@@ -89,6 +90,7 @@ def extractive(question, hits, params):
         use_claims=p["use_claims"],
         semantic_abstain=p["semantic_abstain"],
         verdict=p["verdict"],
+        enrich=p["enrich"],
     )
     return {
         "answer": result.text,

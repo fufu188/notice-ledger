@@ -1,7 +1,7 @@
 # 校务 / 赛事通知可信问答助手（场景化轻量 RAG 知识库）
 
 第九届传智杯「AI 创新应用挑战赛」参赛作品（个人赛 / B 组）。
-**当前状态：v0.3，可运行、可演示，含 Web 界面；FastAPI 主实现已实测验证。** 21 个单测全过（含 P-008 的 10 个回归测试）；真实官方语料上 `recall@3 = 6/8 (75%)`、`recall@5 = 8/8 (100%)`。已修三类真实缺陷（空壳标题挤占排名、词表不匹配漏召、冲突吞掉答案），过程见 `evidence/prompts/P-002` 与 `P-005`。定位与已核实信息见 `findings.md`；确认状态见 `CONFIRM.md`。
+**当前状态：v1.0，可运行、可演示、材料齐备，达到可交付状态。** 35 个单测全过；真实官方语料上 `recall@3 = 6/8 (75%)`、`recall@5 = 8/8 (100%)`。已修三类真实缺陷（空壳标题挤占排名、词表不匹配漏召、冲突吞掉答案），过程见 `evidence/prompts/P-002` 与 `P-005`。定位与已核实信息见 `findings.md`；确认状态见 `CONFIRM.md`。
 
 ## 解决的真实问题
 
@@ -172,3 +172,33 @@ progress.md    会话日志
 | 未覆盖 | 只做了**字面**校验；断言语义、`claim_type` 归类、`value` 抽取偏差仍需人工抽样核查 |
 
 构建脚本 `tools/build_claims.py` 与两轮记录见 `evidence/claims-build.md`、`evidence/claims-build-v1.md`；完整过程链见 `evidence/prompts/P-006.md`。
+
+
+## 交付物与文档（v1.0）
+
+| 文件 | 用途 | 官方要求对应 |
+|---|---|---|
+| `docs/technical.pdf` | 技术文档，**14 页**（pdfplumber 校验） | PDF ≤30 页；意图控制 / 架构设计 / 可复现性论证三主题齐备 |
+| `docs/intro.pdf` | 作品介绍文档，**8 页** | 表单第 6 项 7 小节逐项对应，含真实界面截图 |
+| `docs/video-script.md` | 6 分 30 秒演示视频分镜 | 5–8 分钟 1080p，含 **2 分 10 秒 AI 协同复现** |
+| `docs/pain-points.md` | 需求证据 → 痛点 → 功能映射 | 「痛点定义清晰、面向真实场景」 |
+| `docs/notice-deadline.ics` | RFC 5545 截止提醒样例 | 五要素卡片附带的本地日历工件 |
+| `evidence/submission-checklist.md` | 表单 7 字段逐项核对 | 提交物齐备 |
+| `evidence/research/README.md` | 12 项一手资料逐字摘录索引 | 需求证据可核查 |
+| `evidence/prompts/P-001…P-009.md` | 9 条完整 Prompt 链（5 条含真实修 Bug） | ≥3 条且含修 Bug 引导 |
+| `dist/notice-ledger-v1.0.zip` | 源码 + 文档 + 证据的本地打包 | 供网盘上传（表单第 5 项） |
+
+## 10 分钟复现（裸 Python，无需 key / 联网 / 第三方包）
+
+1. `python -m unittest discover -s tests -q` → 35 个测试通过。
+2. `python -m app.cli --eval` → `recall@3 = 6/8 (75%)`、`recall@5 = 8/8 (100%)`。
+3. `python -m app.cli "省赛作品提交截止是哪一天？"` → 裁决结论 + 原文片段 + 引用。
+4. `python -m app.server --port 8000` → 打开 `http://127.0.0.1:8000/`，可试五要素卡片、`.ics` 下载、`#q=` 分享链接。
+5. 可选：`EVAL_REUSE_BASELINE=1 python tools/run_eval_v1.py && python tools/score_eval.py` 复跑 24 题基准集与 10 组消融。
+
+FastAPI 版需 `pip install -r requirements.txt`；本会话用离线 wheel 装齐并实测 `/health` `/sources` `/` `/docs` `/ask` 全 200。
+`ALLOW_ONLINE_LLM` 默认关闭，DeepSeek key 仅用于离线断言构建与对照组。
+
+## 诚实边界
+
+修复后与纯生成基线结论正确率持平（66.7%），错误口径采信率 12.5% 仍高于基线 8.3%；语义拒答阈值为本基准集经验值，换语料需重新标定。详见 `docs/technical.pdf` 第 9 章。

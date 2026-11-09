@@ -8,7 +8,9 @@ import json
 import re
 import urllib.request
 
+from .card import build_card
 from .claims import load_claim_index
+from .context import RISK_TRIGGERS, enrich_answer
 from .llm import endpoint, online_allowed, resolve
 from .models import Answer
 
@@ -180,6 +182,12 @@ def _should_abstain(question, deduped, claim_best, top1_score):
     # 保护：BM25 首位片段确实覆盖了问题词项时，即便断言资产没收录也不能拒答
     # （组别规则只存在于 demo 文档，断言索引里没有，曾导致「选错组别会怎样」被误拒）。
     coverage = _coverage(question, deduped[0].chunk.text) if deduped else 0.0
+    # 问「后果/风险」时，官方原文里确有「逾期未提交将错失参赛机会」等依据，
+    # 不应因该问句与片段词面不重合而拒答（O5 曾因此完全无法触发）。
+    # 「后果/风险」类问句与官方后果原句词面不重合（错过 vs 逾期未提交），
+    # BM25 召回不到，但知识库里确有该依据（official-03），故不按无依据拒答。
+    if any(w in question for w in RISK_TRIGGERS):
+        return False, ""
     if claim_best < 1.0 and top1_score < 12.0 and coverage < 0.30:
         return True, "检索片段与断言资产均未覆盖问题的核心对象"
     if any(w in question for w in MONEY_ASK):
@@ -251,7 +259,7 @@ def _llm_answer(question, hits, conflicts):
 
 
 def compose(question, hits, min_score=0.35, use_llm=False, normalize_dates=True,
-            use_claims=True, semantic_abstain=True, verdict=True):
+            use_claims=True, semantic_abstain=True, verdict=True, enrich=True):
     deduped = _dedupe_by_doc([h for h in hits if h.score >= min_score])
 
     # D2：断言资产作为第二召回路径，只补充原文片段，不进 citation（避免来源重复）
@@ -264,9 +272,11 @@ def compose(question, hits, min_score=0.35, use_llm=False, normalize_dates=True,
     if semantic_abstain:
         abstain, reason = _should_abstain(question, deduped, claim_best, top1_score)
         if abstain:
+            gap = enrich_answer(question, reason=reason) if enrich else ""
             return Answer(
                 question=question,
-                text=f"知识库中没有可靠依据（{reason}）。请核对官方页面或导入相关通知原文后再问。",
+                text=f"知识库中没有可靠依据（{reason}）。请核对官方页面或导入相关通知原文后再问。"
+                     + (f"\n\n{gap}" if gap else ""),
                 refused=True,
             )
 
@@ -292,6 +302,9 @@ def compose(question, hits, min_score=0.35, use_llm=False, normalize_dates=True,
             deduped[:3], extra, deduped, conflicts,
             verdict=verdict, verdict_text=verdict_text,
         )
+        addition = enrich_answer(question) if enrich else ""
+        if addition:
+            text += "\n\n" + addition
     else:
         refused = False
     return Answer(
@@ -302,4 +315,12 @@ def compose(question, hits, min_score=0.35, use_llm=False, normalize_dates=True,
         refused=refused,
         degraded=degraded,
         hits=deduped,
+        card=(
+            build_card(
+                question, [],
+                [h.chunk.text for h in hits if h.score >= min_score][:8]
+                + [h.chunk.text for h in claim_hits],
+            )
+            if not refused else None
+        ),
     )

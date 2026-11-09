@@ -36,3 +36,4 @@ class Answer:
     refused: bool = False
     degraded: bool = False
     hits: List[Hit] = field(default_factory=list)
+    card: object = None
