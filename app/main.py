@@ -6,10 +6,11 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from .answer import compose
+from .answer import compose, evidence_strength
 from .card import ics_text
 from .cli import DOCS as DOC_DIR, build
 from .llm import available, online_allowed
+from .panels import overview as panel_overview
 
 app = FastAPI(title="校务/赛事通知可信问答助手", version="0.1.0")
 DOCUMENTS, RETRIEVER = build()
@@ -57,6 +58,12 @@ def sources():
     ]
 
 
+@app.get("/api/overview")
+def api_overview():
+    """面板聚合数据：渠道层级、条款覆盖、时间轴、截止倒计时、评测指标。"""
+    return panel_overview(DOCUMENTS, RETRIEVER)
+
+
 @app.post("/ask")
 def ask(request: AskRequest):
     hits = RETRIEVER.search(request.question, top_k=request.top_k)
@@ -66,6 +73,23 @@ def ask(request: AskRequest):
         "question": result.question,
         "answer": result.text,
         "citations": result.citations,
+        "sources": [
+            {
+                "n": i,
+                "title": h.chunk.doc.title,
+                "source": h.chunk.doc.source,
+                "source_url": h.chunk.doc.source_url,
+                "published_at": h.chunk.doc.published_at,
+                "authority": h.chunk.doc.authority,
+                "chunk_id": h.chunk.chunk_id,
+                "score": round(h.score, 2),
+                "excerpt": h.chunk.text[:220],
+            }
+            for i, h in enumerate(result.hits[:3], 1)
+        ],
+        "evidence_strength": evidence_strength(
+            request.question, result.hits, result.refused, result.conflicts
+        ),
         "conflicts": result.conflicts,
         "refused": result.refused,
         "llm_degraded": result.degraded,
@@ -73,7 +97,7 @@ def ask(request: AskRequest):
             {
                 "chunk_id": h.chunk.chunk_id,
                 "title": h.chunk.doc.title,
-                "score": h.score,
+                "score": round(h.score, 2),
                 "excerpt": h.chunk.text[:160],
             }
             for h in hits

@@ -324,3 +324,47 @@ def compose(question, hits, min_score=0.35, use_llm=False, normalize_dates=True,
             if not refused else None
         ),
     )
+
+
+def evidence_strength(question, hits, refused=False, conflicts=None):
+    """证据强度估计（UI 用，不影响答案生成）。
+
+    刻意不叫「置信度」：它由三个可复现的检索侧量算出，不是模型自评，
+    用户可以据此判断「这条答案值不值得信」，而不是信任一个黑箱分数。
+    它衡量的是**本次检索证据的充分度**，不是答案正确率的概率。
+
+    标定依据（2026-11-09，24 题基准集上的 BM25 首位分分布）：
+    - 有明确单源答案的题首位分多在 10~14，多源冲突题在 18~26；
+    - 因此把检索强度按 [5, 20] 分段映射，而不是按分数线除以一个臆造的上限
+      （除以 40 会让「原文白纸黑字写了截止时间」只有 0.3 的检索强度，与事实不符）。
+    """
+    conflicts = conflicts or []
+    if not hits:
+        return {"score": 0, "level": "low",
+                "parts": {"retrieval": 0.0, "coverage": 0.0, "grounding": 0.0},
+                "conflicts": len(conflicts), "top1": 0.0}
+    top1 = hits[0].score
+    coverage = _coverage(question, hits[0].chunk.text)
+    # 分段线性映射：<=5 分记 0，>=20 分记满格
+    retrieval = min(max((top1 - 5.0) / 15.0, 0.0), 1.0)
+    cov_norm = min(max((coverage - 0.15) / 0.45, 0.0), 1.0)
+    grounding = 0.0 if refused else 1.0
+
+    # 地基 42（有引用就说明检索有落点）+ 检索 28 + 覆盖 18 + 结论 12
+    score = 42.0 + 28.0 * retrieval + 18.0 * cov_norm + 12.0 * grounding
+    score -= 7.0 * min(len(conflicts), 3)          # 每处口径差异都要人工核对
+    score = int(round(max(0.0, min(score, 100.0))))
+    if refused:
+        score = min(score, 18)
+    level = "high" if score >= 70 else ("medium" if score >= 45 else "low")
+    return {
+        "score": score,
+        "level": level,
+        "parts": {
+            "retrieval": round(retrieval, 2),
+            "coverage": round(coverage, 2),
+            "grounding": grounding,
+        },
+        "conflicts": len(conflicts),
+        "top1": round(top1, 2),
+    }

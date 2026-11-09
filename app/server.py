@@ -16,10 +16,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .answer import compose
+from .answer import compose, evidence_strength
 from .card import ics_text
 from .cli import DOCS, build
 from .llm import available, online_allowed
+from .panels import overview as panel_overview
 
 DOCUMENTS, RETRIEVER = build()
 WEB_INDEX = Path(__file__).resolve().parent / "web" / "index.html"
@@ -78,6 +79,8 @@ class Handler(BaseHTTPRequestHandler):
                 }
                 for d in DOCUMENTS
             ])
+        elif path == "/api/overview":
+            self._send(200, panel_overview(DOCUMENTS, RETRIEVER))
         else:
             self._send(404, {"error": "not found"})
 
@@ -103,11 +106,29 @@ class Handler(BaseHTTPRequestHandler):
             "question": result.question,
             "answer": result.text,
             "citations": result.citations,
+            "sources": [
+                {
+                    "n": i,
+                    "title": h.chunk.doc.title,
+                    "source": h.chunk.doc.source,
+                    "source_url": h.chunk.doc.source_url,
+                    "published_at": h.chunk.doc.published_at,
+                    "authority": h.chunk.doc.authority,
+                    "chunk_id": h.chunk.chunk_id,
+                    "score": round(h.score, 2),
+                    "excerpt": h.chunk.text[:220],
+                }
+                for i, h in enumerate(result.hits[:3], 1)
+            ],
+            "evidence_strength": evidence_strength(
+                question, result.hits, result.refused, result.conflicts
+            ),
             "conflicts": result.conflicts,
             "refused": result.refused,
             "llm_degraded": result.degraded,
             "hits": [
-                {"chunk_id": h.chunk.chunk_id, "title": h.chunk.doc.title, "score": h.score}
+                {"chunk_id": h.chunk.chunk_id, "title": h.chunk.doc.title,
+                 "score": round(h.score, 2), "excerpt": h.chunk.text[:160]}
                 for h in hits
             ],
             "card": result.card,

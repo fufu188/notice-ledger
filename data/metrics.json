@@ -1,0 +1,32 @@
+{
+  "version": "v1",
+  "generated_at": "2026-11-09T22:09:37",
+  "source": "evidence/eval-report.md",
+  "benchmark": {
+    "file": "data/benchmark-v1.json",
+    "cases": 24,
+    "types": 7,
+    "annotation": "标准答案人工标注，LLM 不参与出题与判卷"
+  },
+  "main": [
+    {"key": "correct", "label": "结论正确率", "ours": 66.7, "baseline": 66.7, "delta": 0.0},
+    {"key": "hallucination", "label": "错误口径采信率", "ours": 12.5, "baseline": 8.3, "delta": 4.2, "lower_better": true},
+    {"key": "refuse", "label": "应拒尽拒率", "ours": 100.0, "baseline": 100.0, "delta": 0.0},
+    {"key": "attribution", "label": "归因可核查率", "ours": 93.2, "baseline": 79.5, "delta": 13.6},
+    {"key": "conflict", "label": "冲突感知率", "ours": 37.5, "baseline": 37.5, "delta": 0.0},
+    {"key": "gold_hit", "label": "gold 片段命中率", "ours": 95.2, "baseline": null, "delta": null}
+  ],
+  "ablation": [
+    {"config": "full", "off": "无（基线）", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5},
+    {"config": "no_claims", "off": "断言补充召回", "correct": 45.8, "delta": -20.8, "hallucination": 16.7, "refuse": 0.0, "attribution": 97.7, "conflict": 12.5},
+    {"config": "no_semantic_abstain", "off": "语义级拒答", "correct": 54.2, "delta": -12.5, "hallucination": 20.8, "refuse": 0.0, "attribution": 97.7, "conflict": 37.5},
+    {"config": "no_authority", "off": "权威度加权", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5},
+    {"config": "no_recency", "off": "时效衰减", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5},
+    {"config": "no_expansion", "off": "同义扩展", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5},
+    {"config": "no_abstain", "off": "拒答阈值", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5},
+    {"config": "no_date_norm", "off": "日期归一化", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5},
+    {"config": "no_verdict", "off": "裁决结论句", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5},
+    {"config": "no_enrich", "off": "附加区块", "correct": 66.7, "delta": 0.0, "hallucination": 12.5, "refuse": 100.0, "attribution": 93.2, "conflict": 37.5}
+  ],
+  "honesty_note": "错误口径采信率仍高于纯生成基线（12.5% vs 8.3%），本页不宣称全面超越；消融中 Δ 为 0 的配置如实记录为 0，不修饰。"
+}
