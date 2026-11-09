@@ -50,7 +50,7 @@ def _norm_date(value):
     return value
 
 
-def detect_conflicts(hits):
+def detect_conflicts(hits, normalize_dates=True):
     """Flag distinct deadline-style dates across retrieved chunks.
 
     Rule-based baseline, not semantic reasoning. Three deliberate constraints:
@@ -67,7 +67,8 @@ def detect_conflicts(hits):
             if not any(word in clause for word in STRONG_TIME_WORDS):
                 continue
             for value in _dates(clause):
-                key = (_norm_date(value), doc.doc_id)
+                date_key = _norm_date(value) if normalize_dates else value
+                key = (date_key, doc.doc_id)
                 if key not in found:
                     found[key] = (
                         f"- {value}｜{doc.title}｜来源：{doc.source}"
@@ -163,7 +164,7 @@ def _llm_answer(question, hits, conflicts):
         return None
 
 
-def compose(question, hits, min_score=0.35, use_llm=False):
+def compose(question, hits, min_score=0.35, use_llm=False, normalize_dates=True):
     hits = _dedupe_by_doc([h for h in hits if h.score >= min_score])
     if not hits:
         return Answer(
@@ -171,7 +172,7 @@ def compose(question, hits, min_score=0.35, use_llm=False):
             text="知识库中没有可靠依据。请导入相关通知原文后再问，或核对官方页面。",
             refused=True,
         )
-    conflicts = detect_conflicts(hits)
+    conflicts = detect_conflicts(hits, normalize_dates=normalize_dates)
     cites = _citation_list(hits[:3])
     text = None
     degraded = False

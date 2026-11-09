@@ -1,0 +1,422 @@
+{
+  "version": "v1",
+  "created_at": "2026-11-09",
+  "annotation_policy": "标准答案由人工按 evidence/official/ 与 data/docs/official-*.md 原文逐条标注；LLM 不参与出题、不参与判卷。判卷只做确定性字符串/规则匹配，见 tools/score_eval.py。",
+  "scope": "inter-context conflict only（依据 arXiv:2403.08319 的三类冲突划分，本项目不处理 context-memory / intra-memory）",
+  "cases": [
+    {
+      "id": "Q01",
+      "type": "single_source",
+      "question": "省赛作品提交截止是哪一天？",
+      "must_include": [
+        "2026-11-18",
+        "15:00"
+      ],
+      "must_not_include": [
+        "2026-12-27",
+        "24:00",
+        "2026-10-31"
+      ],
+      "gold_doc_ids": [
+        "official-01",
+        "official-03",
+        "official-04"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-01「提交截止时间：2026年11月18日15:00」；official-03「请于11月18日15:00前」；official-04「截止时间：2026-11-18 15:00:00」"
+    },
+    {
+      "id": "Q02",
+      "type": "single_source",
+      "question": "省赛最终作品提交链接是什么？",
+      "must_include": [
+        "f.kdocs.cn/g/CZ14BoMv/"
+      ],
+      "must_not_include": [
+        "GZcCLbBV"
+      ],
+      "gold_doc_ids": [
+        "official-03"
+      ],
+      "conflict_doc_ids": [
+        "official-02"
+      ],
+      "expected_refused": false,
+      "annotation_source": "official-03「省赛最终作品提交链接：https://f.kdocs.cn/g/CZ14BoMv/」；GZcCLbBV 是已截止的预指导入口"
+    },
+    {
+      "id": "Q03",
+      "type": "single_source",
+      "question": "演示视频要求多长时间、什么格式？",
+      "must_include": [
+        "5至8分钟",
+        "1080p",
+        "MP4"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-06"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-06「演示视频：5 至 8 分钟，MP4 格式，1080p」"
+    },
+    {
+      "id": "Q04",
+      "type": "single_source",
+      "question": "技术文档最多多少页、什么格式？",
+      "must_include": [
+        "30页",
+        "PDF"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-06"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-06「技术文档：PDF 格式，不超过 30 页」"
+    },
+    {
+      "id": "Q05",
+      "type": "single_source",
+      "question": "省赛一等奖的获奖比例上限是多少？",
+      "must_include": [
+        "10%"
+      ],
+      "must_not_include": [
+        "5%"
+      ],
+      "gold_doc_ids": [
+        "official-05"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-05「一等奖：不超过本省参赛人数10%」；5% 是国赛一等奖比例"
+    },
+    {
+      "id": "Q06",
+      "type": "single_source",
+      "question": "作品介绍文档要求写哪些内容？",
+      "must_include": [
+        "项目详情",
+        "亮点",
+        "关键技术"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-04",
+        "official-06"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-04 字段 6 的七项要求；official-06 末段复述"
+    },
+    {
+      "id": "Q07",
+      "type": "timeline_conflict",
+      "question": "省赛和国赛的作品提交截止分别是哪一天？",
+      "must_include": [
+        "2026-11-18",
+        "2026-12-27"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-01",
+        "official-02"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-01 省赛 11-18；official-02「作品提交截止时间：2026年12月27日」属国赛安排"
+    },
+    {
+      "id": "Q08",
+      "type": "timeline_conflict",
+      "question": "国赛报名是什么时间？",
+      "must_include": [
+        "2026-12-10",
+        "2026-12-21"
+      ],
+      "must_not_include": [
+        "2026-11-18"
+      ],
+      "gold_doc_ids": [
+        "official-02"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-02「报名截止：2026年12月10日至2026年12月21日」"
+    },
+    {
+      "id": "Q09",
+      "type": "timeline_conflict",
+      "question": "省赛预指导作品提交截止是哪一天？",
+      "must_include": [
+        "10月31日"
+      ],
+      "must_not_include": [
+        "2026-11-18"
+      ],
+      "gold_doc_ids": [
+        "official-03"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-03「请于10月31日前完成预指导作品提交」"
+    },
+    {
+      "id": "Q10",
+      "type": "timeline_conflict",
+      "question": "省赛专家评审意见预计什么时候发布？",
+      "must_include": [
+        "2027",
+        "1月底"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-02"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-02「评审意见预计于2027年1月底统一发布」"
+    },
+    {
+      "id": "Q11",
+      "type": "coverage_conflict",
+      "question": "省赛作品提交入口在哪里？",
+      "must_include": [
+        "f.kdocs.cn/g/CZ14BoMv/",
+        "个人中心"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-03",
+        "official-01"
+      ],
+      "conflict_doc_ids": [
+        "official-02"
+      ],
+      "expected_refused": false,
+      "annotation_source": "两处官方口径并存：official-03 给出 kdocs 直链；official-02 写「需完成缴费后登录赛事个人中心所报赛项查看，不再单独提供外部链接」。答案须并列或个人中心+直链同时出现"
+    },
+    {
+      "id": "Q12",
+      "type": "coverage_conflict",
+      "question": "作品提交截止到底是 11 月 18 日还是 12 月 27 日？",
+      "must_include": [
+        "2026-11-18",
+        "2026-12-27",
+        "国赛"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-01",
+        "official-02"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "11-18 是省赛、12-27 是国赛，属阶段不同而非矛盾；须区分阶段"
+    },
+    {
+      "id": "Q13",
+      "type": "coverage_conflict",
+      "question": "国赛二等奖的获奖比例是多少？",
+      "must_include": [
+        "20%",
+        "25%"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-05"
+      ],
+      "conflict_doc_ids": [
+        "official-05"
+      ],
+      "expected_refused": false,
+      "annotation_source": "同一官方页面自相矛盾：official-05 正文写「不超过参赛人数20%」，另一处写「25%」。正确答案必须并列两个数字并承认不一致"
+    },
+    {
+      "id": "Q14",
+      "type": "coverage_conflict",
+      "question": "国赛三等奖的获奖比例是多少？",
+      "must_include": [
+        "35%",
+        "30%"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-05"
+      ],
+      "conflict_doc_ids": [
+        "official-05"
+      ],
+      "expected_refused": false,
+      "annotation_source": "official-05 正文写 35%、另一处写 30%，须并列"
+    },
+    {
+      "id": "Q15",
+      "type": "negative_same_day",
+      "question": "2026-11-18、2026年11月18日、2026-11-18 15:00:00 是三个不同的截止日期吗？",
+      "must_include": [
+        "同一",
+        "不冲突"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-01",
+        "official-02",
+        "official-04"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "三处写法是同一天；按 arXiv:2606.26437 的思路，格式差异不应被计为冲突。判卷接受「同一/一致/不冲突/并非不同」任一表述"
+    },
+    {
+      "id": "Q16",
+      "type": "negative_same_day",
+      "question": "大赛通知的 11月18日15:00 与提交表单的 2026-11-18 15:00:00 冲突吗？",
+      "must_include": [
+        "同一",
+        "不冲突"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-01",
+        "official-04"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "同一时刻的两种写法；用于检验日期归一化误报"
+    },
+    {
+      "id": "Q17",
+      "type": "authority_conflict",
+      "question": "省赛报名截止、作品提交截止、作品指导提交截止都是 11 月 18 日，能当成同一件事吗？",
+      "must_include": [
+        "不能",
+        "区分"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-02",
+        "demo-02"
+      ],
+      "conflict_doc_ids": [
+        "demo-02"
+      ],
+      "expected_refused": false,
+      "annotation_source": "official-02 三个节点同日但事项不同；demo-02 是二手整理稿（authority=2，标注非官方原文），不应凌驾官方原文"
+    },
+    {
+      "id": "Q18",
+      "type": "authority_conflict",
+      "question": "官方通知和交接整理稿的说法不一致时，应该以哪个为准？",
+      "must_include": [
+        "官方",
+        "原文"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-01",
+        "demo-02"
+      ],
+      "conflict_doc_ids": [
+        "demo-02"
+      ],
+      "expected_refused": false,
+      "annotation_source": "官方原文 authority=3，demo 稿 authority=2 且自述「非官方通知原文」"
+    },
+    {
+      "id": "Q19",
+      "type": "abstain",
+      "question": "省赛答辩安排在哪一天？",
+      "must_include": [],
+      "must_not_include": [
+        "2026-11-18",
+        "2026-12-27"
+      ],
+      "gold_doc_ids": [],
+      "conflict_doc_ids": [],
+      "expected_refused": true,
+      "annotation_source": "官方页面未提答辩（见 findings.md 0.6）。应拒答，不得编造日期"
+    },
+    {
+      "id": "Q20",
+      "type": "abstain",
+      "question": "颁奖典礼的具体日期是什么时候？",
+      "must_include": [],
+      "must_not_include": [
+        "2026-11-18",
+        "2026-12-27"
+      ],
+      "gold_doc_ids": [],
+      "conflict_doc_ids": [],
+      "expected_refused": true,
+      "annotation_source": "赛程图含「颁奖典礼」但无时间（官方原文未见），应拒答"
+    },
+    {
+      "id": "Q21",
+      "type": "abstain",
+      "question": "省赛报名费是多少钱？",
+      "must_include": [],
+      "must_not_include": [
+        "198",
+        "128"
+      ],
+      "gold_doc_ids": [
+        "official-02"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": true,
+      "annotation_source": "官方语料只写「需完成缴费」，未给金额；198/128 来自高校通知与用户自述，不在本知识库，不得作为答案"
+    },
+    {
+      "id": "Q22",
+      "type": "multi_hop",
+      "question": "演示视频能不能用百度网盘链接提交？",
+      "must_include": [
+        "不能",
+        "B 站"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-04"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-04 字段 7「切勿提交百度网盘链接…统一上传至B站、抖音等」；判卷接受「抖音」替代「B 站」"
+    },
+    {
+      "id": "Q23",
+      "type": "multi_hop",
+      "question": "作品介绍文档最多能上传几个文件、单个文件多大？",
+      "must_include": [
+        "最多上传1个",
+        "100MB"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-04"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-04 字段 6「最多上传1个文件，单个文件100MB以内」"
+    },
+    {
+      "id": "Q24",
+      "type": "multi_hop",
+      "question": "省赛一、二、三等奖都能晋级国赛吗？",
+      "must_include": [
+        "晋级"
+      ],
+      "must_not_include": [],
+      "gold_doc_ids": [
+        "official-05"
+      ],
+      "conflict_doc_ids": [],
+      "expected_refused": false,
+      "annotation_source": "official-05「省赛一、二、三等奖获得者晋级全国总决赛」；优秀奖不晋级"
+    }
+  ]
+}
