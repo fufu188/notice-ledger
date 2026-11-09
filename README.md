@@ -158,3 +158,17 @@ CONFIRM.md     待确认事项清单
 task_plan.md   阶段计划
 progress.md    会话日志
 ```
+
+## 离线断言资产（构建期产物，不参与运行时）
+
+`data/claims.json` 是 6 份官方通知经 `deepseek-flash` 抽取的 **141 条原子断言**，每条带 `claim_type` / `value` / `evidence_span` / `effective_from` / `authority` / `source_url`。**LLM 负责提，程序负责验**：`evidence_span` 必须逐字出现在原文中，否则标记并保留，不静默丢弃。最终 141/141 通过字面校验。
+
+| 边界 | 说明 |
+|---|---|
+| 凭据 | 只从环境变量读取（`DEEPSEEK_API_KEY` / `LLM_API_KEY`），**不写入任何文件、不进仓库、不进 Git 历史** |
+| 用途 | 仅构建期：断言抽取、基准集负样本、纯生成基线对照 |
+| 运行时 | `ALLOW_ONLINE_LLM` 默认关闭；`--llm` 会被拒绝并降级为抽取式，`/health` 返回 `online_llm_allowed=false` |
+| 复现 | 资产已固化落盘，离线环境 10 分钟复现不需要 key、不需要联网 |
+| 未覆盖 | 只做了**字面**校验；断言语义、`claim_type` 归类、`value` 抽取偏差仍需人工抽样核查 |
+
+构建脚本 `tools/build_claims.py` 与两轮记录见 `evidence/claims-build.md`、`evidence/claims-build-v1.md`；完整过程链见 `evidence/prompts/P-006.md`。

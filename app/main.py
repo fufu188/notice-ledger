@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from .answer import compose
 from .cli import DOCS as DOC_DIR, build
+from .llm import available, online_allowed
 
 app = FastAPI(title="校务/赛事通知可信问答助手", version="0.1.0")
 DOCUMENTS, RETRIEVER = build()
@@ -34,11 +35,9 @@ def health():
         "docs": len(DOCUMENTS),
         "chunks": len(RETRIEVER.chunks),
         "doc_dir": str(DOC_DIR),
-        "llm_configured": bool(
-            os.environ.get("LLM_API_KEY")
-            and os.environ.get("LLM_BASE_URL")
-            and os.environ.get("LLM_MODEL")
-        ),
+        "llm_configured": available() and online_allowed(),
+        "offline_key_available": available(),
+        "online_llm_allowed": online_allowed(),
     }
 
 

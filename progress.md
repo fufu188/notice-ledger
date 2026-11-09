@@ -181,3 +181,35 @@ P-006：混合检索（向量 + 词法）解决 URL 类长 token 漏召；随后
 
 ### 待用户决策
 是否提供 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`、额度上限，以及授权范围（仅离线构造资产 vs 允许在线生成）。详见 `CONFIRM.md` D2a。
+
+## Session: 2026-11-09（续 6）— 接入环境变量 key，产出离线断言资产（P-006）
+
+### Actions Taken
+1. 脱敏枚举环境变量 → 找到 `DEEPSEEK_API_KEY`（此前查 `LLM_API_KEY` 为空导致误判"没有 key"）。
+2. 拉 DeepSeek 官方文档核对 `base_url` 与模型名；发现记忆里的 `deepseek-chat` 不在当前文档，改按 `https://api.deepseek.com` + `deepseek-flash`。
+3. 标准库 `urllib` 最小调用：`HTTP 200`、回复「可用」、66 tokens。
+4. 新增 `app/llm.py`（别名解析 + 官方文档默认值 + `online_allowed()` 硬门禁）；`app/answer.py` 接入门禁；`server.py` / `main.py` 的 `/health` 增加 `offline_key_available` / `online_llm_allowed` 状态。
+5. 新增 `tools/build_claims.py`：6 份官方通知 → 原子断言，逐字回查 `evidence_span`。
+6. 发现并修正一次自己的错误归因（v1 的 2 条"幻觉"实为元数据断言），v1 记录原样保留后重跑。
+
+### Test Results
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| 官方接口最小调用 | 200 | `HTTP 200 / deepseek-flash / 66 tokens` | PASS |
+| 断言抽取 v1 | — | 157 条 / 155 通过 / 2 条被错判 | 记录保留 |
+| 断言抽取 v2 | 消除元数据误判 | **141 条 / 141 通过 / 0 未通过** | PASS |
+| 在线门禁 | `--llm` 不发云端请求 | `LLM降级=True`，零调用 | PASS |
+| 单元测试 | 不回退 | `Ran 11 tests ... OK` | PASS |
+| 评测集 | 不回退 | `recall@3 6/8`、`recall@5 8/8` | PASS |
+| HTTP 自测 | 三接口 + 界面路由 | 200 / docs=10 / chunks=64 | PASS |
+| 密钥泄露检查 | 无 | `git log -S"sk-"` 为空；key 未落盘 | PASS |
+
+### Errors
+| Error | Resolution |
+|-------|------------|
+| 上一轮判定"没有可用 key" | 查错变量名；脱敏枚举全部环境变量后找到 `DEEPSEEK_API_KEY` |
+| 凭记忆会写成 `deepseek-chat` | 拉官方文档核对，改 `deepseek-flash` |
+| 把 2 条元数据断言误报成模型编造 | 提示词加元数据禁令、校验器加 `meta_only` 归类；保留 v1 记录并公开更正 |
+
+### Next
+P-007：用同一 key 造纯生成基线对照组，在口径基准集上与抽取式裁决对比幻觉率 / 裁决准确率 / 归因可支撑率。

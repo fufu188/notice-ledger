@@ -9,6 +9,7 @@ import os
 import re
 import urllib.request
 
+from .llm import endpoint, online_allowed, resolve
 from .models import Answer
 
 DATE_RE = re.compile(
@@ -128,12 +129,12 @@ def _offline_answer(hits, conflicts):
 
 
 def _llm_answer(question, hits, conflicts):
-    key = os.environ.get("LLM_API_KEY", "").strip()
-    base = os.environ.get("LLM_BASE_URL", "").strip()
-    model = os.environ.get("LLM_MODEL", "").strip()
-    if not (key and base and model):
+    if not online_allowed():
         return None
-    url = base.rstrip("/") + "/chat/completions"
+    key, base, model = resolve()
+    if not key:
+        return None
+    url = endpoint(base)
     payload = {
         "model": model,
         "messages": [

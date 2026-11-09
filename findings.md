@@ -209,3 +209,11 @@
 - **本地推理条件（2026-11-09 实测）**：`NVIDIA GeForce RTX 4060 Laptop GPU, 8188 MiB`，C 盘可用 103G，`ollama` 未安装。7B 级 Q4 量化模型（约 4–5GB）在本机可跑，是「零成本 + 可复现」的本地生成备选；模型下载渠道仍未确认（E3）。
 - **本轮作品实测**：7 个标准库单测全过；评测集 `recall@3 = 4/4 = 100%`；零依赖 HTTP 服务 `/health` `/sources` `/ask` 自测通过（docs=4、chunks=8）。
 
+## 10. 云端 key 的接入边界（2026-11-09 20:50 实测）
+
+- 凭据：进程环境变量存在 `DEEPSEEK_API_KEY`（此前检查的 `LLM_API_KEY` 为空，故上一轮误判"没有 key"）。**只列过变量名与脱敏前缀，完整值未回显、未写入任何文件、未进 Git 历史**；`git log -S"sk-"` 复核为空。
+- 参数来源：官方文档 `https://api-docs.deepseek.com/zh-cn/`（2026-11-09 拉取）——`base_url = https://api.deepseek.com`，模型 `deepseek-flash` / `deepseek-v4-pro`。**记忆中的 `deepseek-chat` 不在当前文档中**，已按文档填写，未凭印象写死。
+- 连通性实测：标准库 `urllib` 调用 `chat/completions` → `HTTP 200`、`model=deepseek-flash`、66 tokens。
+- 用途边界（用户决策 D2a）：**仅离线资产构造与对照组**。运行时由 `ALLOW_ONLINE_LLM` 硬门禁关闭，实测 `python -m app.cli --llm` 返回 `LLM降级=True`、零云端请求；`/health` 显示 `offline_key_available` 与 `online_llm_allowed` 两项状态。
+- 首个离线资产：`data/claims.json`，141 条原子断言，`evidence_verified` 141/141。两轮构建共约 101,692 tokens。
+- **一次自我更正**：v1 曾把 2 条"未通过校验"归因为模型编造，实为提示词未禁止抽元数据 + 校验器只比对 `doc.body`。v1 原始记录保留在 `evidence/claims-build-v1.md`，未改写；修正后重跑 141/141。

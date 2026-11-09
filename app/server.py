@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 
 from .answer import compose
 from .cli import DOCS, build
+from .llm import available, online_allowed
 
 DOCUMENTS, RETRIEVER = build()
 WEB_INDEX = Path(__file__).resolve().parent / "web" / "index.html"
@@ -60,11 +61,9 @@ class Handler(BaseHTTPRequestHandler):
                 "docs": len(DOCUMENTS),
                 "chunks": len(RETRIEVER.chunks),
                 "doc_dir": str(DOCS),
-                "llm_configured": bool(
-                    os.environ.get("LLM_API_KEY")
-                    and os.environ.get("LLM_BASE_URL")
-                    and os.environ.get("LLM_MODEL")
-                ),
+                "llm_configured": available() and online_allowed(),
+                "offline_key_available": available(),
+                "online_llm_allowed": online_allowed(),
             })
         elif path == "/sources":
             self._send(200, [
