@@ -1,0 +1,28 @@
+# 本地工作区数据（不作为比赛提交物）
+.workbuddy/
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 过程证据中的大文件（按需单独 git add -f）
+evidence/screenshots/
+*.mp4
+*.mov
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
