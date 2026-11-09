@@ -1,6 +1,7 @@
 # Task Plan: 第九届传智杯 AI 创新应用挑战赛（个人赛 / B 组）参赛推进
 
 > 基线：`findings.md`（只记已确认事实）｜待确认：`CONFIRM.md`｜过程留存：`evidence/README.md`｜会话日志：`progress.md`
+> **执行排期以 `PLAN-NEXT.md` 为唯一权威**（逐日 D1–D9 + 国赛、交付物对照、回滚点）；`ROADMAP.md` 为资料核实档案，`OPTIMIZATION.md` 为优化建议与依据，均不再单独维护排期。
 > 信息边界：本计划只列交接文档已确认的任务与节点；未提供的比赛细节不补写，一律留在 `CONFIRM.md`。
 
 ## Goal
@@ -9,11 +10,11 @@
 
 ## Next Step
 
-跑通「校务/赛事通知可信问答助手」最小可运行垂直切片（零依赖检索核心 + FastAPI 薄封装 + 评测集），落第一条 Prompt 链 `P-001` 与首次功能提交；同时继续等 `CONFIRM.md` 剩余 19 项答复。
+按 `PLAN-NEXT.md` 执行 **D1（11-10）**：O6 需求证据包收口 → O3 证据缺口说明书 → O2 渠道标注 → 用同一 24 题基准集复跑确认指标不回退。等待用户提供 Public 仓库地址（`CONFIRM.md` D4，最晚 11-16 12:00，不阻塞 D1–D5）。
 
 ## Current Phase
 
-Phase 3（Phase 2 并行进行中：待确认事项尚未闭环，但不阻塞不依赖它们的垂直切片）
+Phase 3 收口中（D1 优化 → D3 代码冻结 → D4–D9 交付物与提交）；Phase 2 仅剩 D4 仓库地址待用户提供，不阻塞其余工作。
 
 ## Phases
 
