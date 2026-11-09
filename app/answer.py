@@ -30,6 +30,25 @@ def _dates(text):
     return list(dict.fromkeys(DATE_RE.findall(text)))
 
 
+NUM_DATE = re.compile(r"(20\d{2})\D{0,3}(\d{1,2})\D{0,3}(\d{1,2})")
+MONTH_ONLY = re.compile(r"(20\d{2})\D{0,3}(\d{1,2})月(?:底|初|中)?")
+
+
+def _norm_date(value):
+    """把「2026年11月18日」「2026-11-18」「2026/11/18」归一成同一个键。
+
+    不做这一步，同一天的三种写法会被当成三处「口径差异」——误报比漏报更伤可信度：
+    用户看到「存在 3 处不同写法」去核对，发现全是同一天，就不再信这个系统了。
+    """
+    match = NUM_DATE.search(value)
+    if match:
+        return f"{match.group(1)}-{int(match.group(2)):02d}-{int(match.group(3)):02d}"
+    match = MONTH_ONLY.search(value)
+    if match:
+        return f"{match.group(1)}-{int(match.group(2)):02d}"
+    return value
+
+
 def detect_conflicts(hits):
     """Flag distinct deadline-style dates across retrieved chunks.
 
@@ -47,7 +66,7 @@ def detect_conflicts(hits):
             if not any(word in clause for word in STRONG_TIME_WORDS):
                 continue
             for value in _dates(clause):
-                key = (value, doc.doc_id)
+                key = (_norm_date(value), doc.doc_id)
                 if key not in found:
                     found[key] = (
                         f"- {value}｜{doc.title}｜来源：{doc.source}"
@@ -90,14 +109,21 @@ def _build_context(hits):
 
 
 def _offline_answer(hits, conflicts):
+    """抽取式回答：永远先给原文片段，冲突只作为附注。
+
+    早先的写法是「有冲突就整段换成冲突列表」，结果是用户明明问『截止是哪一天』，
+    却只拿到一串并列日期、没有任何一句正面回答（真实缺陷，见 P-005）。主答与提示
+    必须分开：答案要能读，风险提示要显眼但不吞掉答案。
+    """
     top = hits[:3]
     cites = _citation_list(top)
+    head = "据资料记载（以下为检索到的原文片段，非自动改写结论）：\n"
+    body = "\n".join(f"[{i}] {h.chunk.text}" for i, h in enumerate(top, 1))
     if conflicts:
-        head = "检测到口径差异，以下为资料中并列记载的多个日期/说法，请核对原始通知，不要直接采信其中一条：\n"
-        body = "\n".join(conflicts)
-    else:
-        head = "据资料记载（以下为检索到的原文片段，非自动改写结论）：\n"
-        body = "\n".join(f"[{i}] {h.chunk.text}" for i, h in enumerate(top, 1))
+        head += (
+            f"\n注意：同一事项在资料中存在 {len(conflicts)} 处不同写法，"
+            "已在下方「口径差异」中并列列出，请以原始通知为准。\n"
+        )
     return head + body, cites, False
 
 

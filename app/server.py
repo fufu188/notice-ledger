@@ -13,12 +13,14 @@ import os
 import threading
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import urlparse
 
 from .answer import compose
 from .cli import DOCS, build
 
 DOCUMENTS, RETRIEVER = build()
+WEB_INDEX = Path(__file__).resolve().parent / "web" / "index.html"
 # Bypass any injected HTTP proxy for loopback requests.
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
@@ -35,9 +37,23 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_html(self, status, text):
+        body = text.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         path = urlparse(self.path).path
-        if path == "/health":
+        if path in ("/", "/index.html"):
+            if WEB_INDEX.exists():
+                self._send_html(200, WEB_INDEX.read_text(encoding="utf-8"))
+            else:
+                self._send_html(500, "<h1>界面文件缺失</h1><p>app/web/index.html 未找到</p>")
+        elif path == "/health":
             self._send(200, {
                 "status": "ok",
                 "server": "stdlib-fallback",
@@ -106,6 +122,10 @@ def selftest():
     try:
         with OPENER.open(base + "/health", timeout=5) as response:
             print("GET /health ->", json.loads(response.read().decode("utf-8")))
+        with OPENER.open(base + "/", timeout=5) as response:
+            html = response.read().decode("utf-8")
+        print("GET / ->", response.status, "| html bytes =", len(html),
+              "| has_title =", "<title>" in html, "| has_ask =", "/ask" in html)
         with OPENER.open(base + "/sources", timeout=5) as response:
             print("GET /sources ->", len(json.loads(response.read().decode("utf-8"))), "docs")
         payload = json.dumps({"question": "选错组别会怎样"}, ensure_ascii=False).encode("utf-8")

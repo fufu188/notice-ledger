@@ -80,6 +80,44 @@ class CoreTests(unittest.TestCase):
         self.assertTrue(result.citations)
         self.assertTrue(all(line.startswith("[") for line in result.citations))
 
+    # —— 以下两个测试锁死 P-005 修掉的两类真实缺陷，防止回归 ——
+
+    def test_heading_is_merged_into_body(self):
+        """小节标题不得单独成块（真实语料里它会把含答案的段落挤出 top-K）。"""
+        doc = make_doc(
+            "t-05",
+            "提交通道",
+            "二、作品提交方式\n\n登录官网，进入个人中心，点击参赛流程完成提交。",
+        )
+        chunks = [c for c in chunk_docs([doc])]
+        self.assertEqual(len(chunks), 1)
+        self.assertIn("作品提交方式", chunks[0].text)
+        self.assertIn("个人中心", chunks[0].text)
+
+    def test_heading_alone_does_not_become_dead_chunk(self):
+        """整篇只有标题时也不能产出空壳块。"""
+        doc = make_doc("t-06", "只有一个标题", "三、特别提醒")
+        chunks = chunk_docs([doc])
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0].text, "三、特别提醒")
+
+    def test_synonym_expansion_bridges_entry_vs_link(self):
+        """用户问「入口」、原文写「提交链接」时，不能因为词表不重合而漏召。"""
+        docs = [
+            make_doc("t-07", "提交通道", "省赛最终作品提交链接：https://example.invalid/form 。"),
+            make_doc("t-08", "无关通知", "本次比赛的颁奖典礼另行通知。"),
+        ]
+        retriever = Retriever(chunk_docs(docs))
+        hits = retriever.search("入口在哪", top_k=2)
+        self.assertTrue(hits)
+        self.assertEqual(hits[0].chunk.doc.doc_id, "t-07")
+
+    def test_expansion_can_be_disabled(self):
+        """扩展必须是可关闭的，否则消融实验做不了。"""
+        docs = [make_doc("t-09", "提交通道", "省赛最终作品提交链接：https://example.invalid/form 。")]
+        retriever = Retriever(chunk_docs(docs))
+        self.assertEqual(retriever.search("入口在哪", top_k=1, expand=False), [])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

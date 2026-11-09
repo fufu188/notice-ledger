@@ -16,6 +16,25 @@ B = 0.75
 CJK = re.compile(r"[\u4e00-\u9fff]+")
 LATIN = re.compile(r"[A-Za-z0-9_]+")
 
+# 词表不匹配是真实失败的根因之一：用户问「入口」，官方原文写「提交链接」。
+# 纯 BM25 只会因为一个 bigram 不重合而整条漏召（实测 official-03 进不了 top8）。
+# 这里给少量「同一件事的不同说法」做低权重扩展，扩展项权重 < 1，避免喧宾夺主。
+EXPANSION_WEIGHT = 0.45
+SYNONYM_GROUPS = (
+    ("入口", "链接", "地址", "网址", "方式"),
+    ("截止", "期限", "前完成", "逾期"),
+    ("缴费", "交费", "付费", "费用", "收费"),
+    ("比例", "获奖率", "名额", "占比"),
+    ("评分", "得分", "权重", "考核", "考察"),
+    ("文档", "材料", "文件", "提交物"),
+    ("视频", "演示", "录屏"),
+)
+SYNONYM_MAP = {}
+for _group in SYNONYM_GROUPS:
+    for _term in _group:
+        SYNONYM_MAP.setdefault(_term, set()).update(t for t in _group if t != _term)
+
+
 
 def tokenize(text):
     tokens = []
@@ -56,18 +75,24 @@ class Retriever:
         df = self.df.get(term, 0)
         return math.log(1 + (self.n - df + 0.5) / (df + 0.5))
 
-    def search(self, query, top_k=5, authority_weight=0.15, recency_tau=540):
-        query_terms = set(tokenize(query))
+    def search(self, query, top_k=5, authority_weight=0.15, recency_tau=540, expand=True):
+        terms = {}
+        for token in tokenize(query):
+            terms[token] = 1.0
+        if expand:
+            for token in list(terms):
+                for alt in SYNONYM_MAP.get(token, ()):  # 低权重同义扩展
+                    terms.setdefault(alt, EXPANSION_WEIGHT)
         hits = []
         for index, tf in enumerate(self.tfs):
             dl = self.lengths[index] or 1
             score = 0.0
-            for term in query_terms:
+            for term, weight in terms.items():
                 freq = tf.get(term, 0)
                 if not freq:
                     continue
                 denom = freq + K1 * (1 - B + B * dl / (self.avg_len or 1))
-                score += self._idf(term) * freq * (K1 + 1) / denom
+                score += weight * self._idf(term) * freq * (K1 + 1) / denom
             if score <= 0:
                 continue
             doc = self.chunks[index].doc

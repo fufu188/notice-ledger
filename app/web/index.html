@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>校务/赛事通知可信问答助手</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2129; --line:#30363d;
+    --fg:#e6edf3; --fg-dim:#8b949e; --fg-faint:#6e7681;
+    --accent:#58a6ff; --accent-soft:rgba(88,166,255,.12);
+    --warn:#d29922; --warn-soft:rgba(210,153,34,.10);
+    --danger:#f85149; --danger-soft:rgba(248,81,73,.10);
+    --ok:#3fb950; --ok-soft:rgba(63,185,80,.10);
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);
+    font:15px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header{
+    display:flex;align-items:center;gap:16px;
+    padding:14px 22px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#161b22,#0d1117);flex:0 0 auto;
+  }
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .logo{
+    width:30px;height:30px;border-radius:8px;flex:0 0 auto;
+    background:linear-gradient(135deg,#58a6ff,#a371f7);
+    display:grid;place-items:center;font-weight:700;font-size:14px;color:#0d1117;
+  }
+  .brand h1{font-size:15.5px;margin:0;font-weight:650;letter-spacing:.2px;white-space:nowrap}
+  .brand p{margin:0;font-size:12px;color:var(--fg-dim);white-space:nowrap}
+  .stats{margin-left:auto;display:flex;gap:18px;font-size:12px;color:var(--fg-dim)}
+  .stats b{color:var(--fg);font-weight:600}
+  .stats span{white-space:nowrap}
+
+  main{flex:1 1 auto;display:grid;grid-template-columns:288px 1fr;min-height:0}
+  aside{
+    border-right:1px solid var(--line);background:var(--panel);
+    overflow-y:auto;padding:16px 14px;
+  }
+  aside h2{
+    font-size:11.5px;text-transform:uppercase;letter-spacing:.9px;
+    color:var(--fg-faint);margin:0 0 11px;font-weight:600;
+  }
+  .src{
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px;
+    margin-bottom:8px;background:var(--panel-2);transition:border-color .15s;
+  }
+  .src:hover{border-color:#455065}
+  .src .t{font-size:13px;line-height:1.45;margin-bottom:5px}
+  .src .m{font-size:11px;color:var(--fg-faint);display:flex;gap:8px;flex-wrap:wrap}
+  .tag{
+    font-size:10.5px;padding:1px 6px;border-radius:5px;
+    background:var(--accent-soft);color:var(--accent);border:1px solid rgba(88,166,255,.25);
+  }
+  .tag.off{background:var(--warn-soft);color:var(--warn);border-color:rgba(210,153,34,.3)}
+
+  section{display:flex;flex-direction:column;min-height:0}
+  #log{flex:1 1 auto;overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:18px}
+  .empty{margin:auto;text-align:center;color:var(--fg-dim);max-width:520px}
+  .empty h3{color:var(--fg);font-size:17px;margin:0 0 8px;font-weight:600}
+  .empty ol{text-align:left;font-size:13.5px;line-height:1.9;color:var(--fg-dim);margin:14px 0 18px;padding-left:22px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .chip{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--fg-dim);
+    padding:7px 13px;border-radius:20px;font-size:12.5px;cursor:pointer;
+    transition:all .15s;font-family:inherit;
+  }
+  .chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+  .q{display:flex;justify-content:flex-end}
+  .q .bubble{
+    background:var(--accent-soft);border:1px solid rgba(88,166,255,.28);
+    padding:10px 15px;border-radius:var(--radius) var(--radius) 3px var(--radius);
+    max-width:78%;white-space:pre-wrap;word-break:break-word;
+  }
+  .a{display:flex;flex-direction:column;gap:10px;max-width:100%}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px 17px;white-space:pre-wrap;word-break:break-word;
+  }
+  .card.refused{border-color:rgba(248,81,73,.45);background:var(--danger-soft)}
+  .verdict{
+    display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+    padding:3px 9px;border-radius:6px;margin-bottom:9px;letter-spacing:.3px;
+  }
+  .verdict.ok{background:var(--ok-soft);color:var(--ok);border:1px solid rgba(63,185,80,.28)}
+  .verdict.no{background:rgba(248,81,73,.16);color:var(--danger);border:1px solid rgba(248,81,73,.35)}
+
+  .block{border-radius:var(--radius);border:1px solid;padding:13px 16px;font-size:13.5px}
+  .block.warn{border-color:rgba(210,153,34,.4);background:var(--warn-soft)}
+  .block.warn .h{color:var(--warn);font-weight:600;font-size:12.5px;margin-bottom:8px;letter-spacing:.3px}
+  .block.cite{border-color:var(--line);background:var(--panel-2)}
+  .block.cite .h{color:var(--fg-faint);font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px}
+  .block ul{margin:0;padding-left:18px}
+  .block li{margin:5px 0;color:var(--fg);word-break:break-all}
+  .block.warn li{color:#e3c07b}
+
+  .meta{
+    display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--fg-faint);
+    padding-left:2px;
+  }
+  .meta b{color:var(--fg-dim);font-weight:600}
+
+  footer{flex:0 0 auto;border-top:1px solid var(--line);background:var(--panel);padding:14px 26px 16px}
+  .composer{display:flex;gap:10px;align-items:flex-end;max-width:1000px;margin:0 auto}
+  textarea{
+    flex:1 1 auto;resize:none;background:var(--bg);color:var(--fg);
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:11px 14px;font:inherit;font-size:14px;line-height:1.5;
+    min-height:46px;max-height:150px;outline:none;transition:border-color .15s;
+  }
+  textarea:focus{border-color:var(--accent)}
+  button#send{
+    flex:0 0 auto;height:46px;padding:0 22px;border-radius:var(--radius);
+    border:1px solid rgba(88,166,255,.4);background:var(--accent);color:#0d1117;
+    font:inherit;font-weight:650;font-size:14px;cursor:pointer;transition:opacity .15s;
+  }
+  button#send:hover{opacity:.88}
+  button#send:disabled{opacity:.45;cursor:default}
+  .hint{max-width:1000px;margin:8px auto 0;font-size:11.5px;color:var(--fg-faint);display:flex;gap:16px;flex-wrap:wrap}
+  .dots::after{content:"";animation:dots 1.2s steps(4,end) infinite}
+  @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+  @media(max-width:900px){
+    main{grid-template-columns:1fr}
+    aside{display:none}
+    .brand p{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">知</div>
+    <div>
+      <h1>校务 / 赛事通知可信问答助手</h1>
+      <p>多源通知口径差异检测 · 逐条引用溯源 · 无依据即拒答</p>
+    </div>
+  </div>
+  <div class="stats" id="stats"><span>加载中</span></div>
+</header>
+
+<main>
+  <aside>
+    <h2>知识库来源</h2>
+    <div id="sources"></div>
+  </aside>
+
+  <section>
+    <div id="log">
+      <div class="empty" id="empty">
+        <h3>先问一个和通知有关的问题</h3>
+        <ol>
+          <li>系统只回答<strong>知识库里确实写了</strong>的内容，每条结论都给出出处与发布时间</li>
+          <li>同一件事在不同通知里写法不一致时，会<strong>并列列出全部口径</strong>，不替你选</li>
+          <li>知识库里找不到依据时<strong>直接拒答</strong>，不猜、不编</li>
+        </ol>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="composer">
+    <textarea id="q" rows="1" placeholder="例如：省赛作品提交截止是哪一天？（Enter 发送，Shift+Enter 换行）"></textarea>
+    <button id="send">发送</button>
+  </div>
+  <div class="hint">
+    <span>检索：中文 bi-gram + BM25（离线，零第三方依赖）</span>
+    <span>生成：默认抽取式；配置 LLM 环境变量后可切换</span>
+  </div>
+</footer>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const log = $('#log');
+const ta = $('#q');
+const btn = $('#send');
+
+const EXAMPLES = [
+  '省赛作品提交截止是哪一天？',
+  '省赛作品提交入口在哪里',
+  '选错组别会有什么后果？',
+  '省赛一等奖的比例是多少？',
+  '技术文档不能超过多少页？',
+  '今天天气适合放风筝吗'
+];
+
+function el(tag, cls, text){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function boot(){
+  try{
+    const [h, s] = await Promise.all([
+      fetch('/health').then(r => r.json()),
+      fetch('/sources').then(r => r.json())
+    ]);
+    $('#stats').innerHTML =
+      `<span>文档 <b>${h.docs}</b></span>` +
+      `<span>片段 <b>${h.chunks}</b></span>` +
+      `<span>LLM <b>${h.llm_configured ? '已配置' : '未配置（抽取式）'}</b></span>`;
+    const box = $('#sources');
+    box.innerHTML = '';
+    s.forEach(d => {
+      const item = el('div','src');
+      const t = el('div','t', d.title);
+      const m = el('div','m');
+      const auth = el('span', 'tag' + (d.authority >= 3 ? '' : ' off'), '权威 ' + d.authority);
+      const date = el('span', null, d.published_at || '无日期');
+      m.append(auth, date);
+      item.append(t, m);
+      if (d.source_url){
+        const a = el('a', null, '查看原文');
+        a.href = d.source_url; a.target = '_blank'; a.rel = 'noopener';
+        a.style.fontSize = '11px';
+        const wrap = el('div');
+        wrap.style.marginTop = '6px';
+        wrap.append(a);
+        item.append(wrap);
+      }
+      box.append(item);
+    });
+  }catch(e){
+    $('#stats').innerHTML = '<span style="color:var(--danger)">服务未就绪</span>';
+  }
+}
+
+function renderQuestion(text){
+  const row = el('div','q');
+  row.append(el('div','bubble', text));
+  log.append(row);
+}
+
+function renderLoading(){
+  const row = el('div','a');
+  const card = el('div','card');
+  card.append(el('span','verdict ok', '检索中'));
+  const span = el('span','dots');
+  card.append(span);
+  row.append(card);
+  log.append(row);
+  log.scrollTop = log.scrollHeight;
+  return row;
+}
+
+function renderAnswer(payload){
+  const row = el('div','a');
+  const card = el('div','card' + (payload.refused ? ' refused' : ''));
+  const v = el('span','verdict ' + (payload.refused ? 'no' : 'ok'),
+               payload.refused ? '无依据 · 已拒答' : '有据可查');
+  card.append(v);
+  card.append(el('div', null, payload.answer));
+
+  if (payload.citations && payload.citations.length){
+    const b = el('div','block cite');
+    b.append(el('div','h','引用来源'));
+    const ul = el('ul');
+    payload.citations.forEach(c => ul.append(el('li', null, String(c).trim())));
+    b.append(ul);
+    card.append(document.createElement('div'));
+    card.append(b);
+  }
+
+  if (payload.conflicts && payload.conflicts.length){
+    const b = el('div','block warn');
+    b.append(el('div','h', '口径差异 ' + payload.conflicts.length + ' 条 · 请核对原始通知'));
+    const ul = el('ul');
+    payload.conflicts.forEach(c => ul.append(el('li', null, String(c).replace(/^-\s*/, ''))));
+    b.append(ul);
+    card.append(b);
+  }
+
+  const meta = el('div','meta');
+  meta.innerHTML =
+    `<span>命中 <b>${(payload.hits||[]).length}</b> 条</span>` +
+    `<span>耗时 <b>${payload.elapsed_ms != null ? payload.elapsed_ms : '—'}</b> ms</span>` +
+    `<span>生成 <b>${payload.llm_degraded ? '已降级为抽取式' : '抽取式'}</b></span>`;
+  card.append(meta);
+
+  row.append(card);
+  log.append(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function ask(text){
+  const q = (text || ta.value).trim();
+  if (!q) return;
+  ta.value = '';
+  ta.style.height = 'auto';
+  const empty = $('#empty');
+  if (empty) empty.remove();
+
+  renderQuestion(q);
+  const loading = renderLoading();
+  btn.disabled = true;
+
+  try{
+    const t0 = performance.now();
+    const res = await fetch('/ask', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question:q, top_k:5})
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    data.elapsed_ms = Math.round(performance.now() - t0);
+    loading.remove();
+    renderAnswer(data);
+  }catch(e){
+    loading.remove();
+    const row = el('div','a');
+    const card = el('div','card refused');
+    card.append(el('span','verdict no','请求失败'));
+    card.append(el('div', null, String(e && e.message || e)));
+    row.append(card);
+    log.append(row);
+  }finally{
+    btn.disabled = false;
+    ta.focus();
+  }
+}
+
+btn.addEventListener('click', () => ask());
+ta.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){
+    e.preventDefault();
+    ask();
+  }
+});
+ta.addEventListener('input', () => {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
+});
+
+const chips = $('#chips');
+EXAMPLES.forEach(t => {
+  const b = el('button','chip', t);
+  b.type = 'button';
+  b.addEventListener('click', () => ask(t));
+  chips.append(b);
+});
+
+boot();
+
+// 可直接分享的问题链接：http://127.0.0.1:8000/#q=<问题>
+const preset = new URLSearchParams(location.hash.slice(1)).get('q');
+if (preset) ask(preset);
+</script>
+</body>
+</html>

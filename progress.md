@@ -124,3 +124,32 @@
 
 ### Next
 P-005：带上述两条真实失败输出，让 AI 定位「长文档 BM25 稀释」与「小节标题/正文切分」的根因并修，补回归测试。
+
+## Session: 2026-11-09（续 4）— Web UI + 真实缺陷修复（P-005）
+
+### Actions Taken
+1. 新增 `app/web/index.html`：单文件零依赖前端（深色主题、知识库侧栏、引用溯源、口径差异高亮、拒答态、耗时统计、`#q=` 可分享问题链接）。
+2. `app/server.py` 增加 `GET /` 返回界面；`app/main.py`（FastAPI 版）同步增加，两条路径行为一致。
+3. 修复 P-004 暴露的三个真实缺陷：空壳标题（chunker）、词表不匹配（retriever 同义扩展）、冲突吞掉答案（answer）。
+4. 追加 `_norm_date`，同一天的多种写法不再误报为口径差异。
+5. 评测集换成 8 道真实语料题；新增 `data/docs/official-06.md`（作品提交要求与复现材料清单）。
+
+### Test Results
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| 单元测试 | 全过 | `Ran 11 tests ... OK`（新增 4 个回归测试） | PASS |
+| 评测集 recall@3 | ≥ 修复前 | 6/8 = 75% | PASS（真实语料基线） |
+| 评测集 recall@5 | 覆盖全部 | 8/8 = 100% | PASS |
+| 切分块数 | 消除空壳 | 69 → 55 | PASS |
+| "截止是哪一天"首位命中 | official-01 | official-01#1（11月18日15:00）排第一 | PASS |
+| 界面路由 | 200 + HTML | 200，12415 bytes，含 title 与 /ask | PASS |
+| 界面渲染 | 无错位/溢出 | 截图核对，深色主题正常 | PASS |
+
+### Errors
+| Error | Resolution |
+|-------|------------|
+| `Page.captureScreenshot` 对后台标签页超时 | 改用 headless 截图（`--virtual-time-budget`） |
+| 前端看不到正面结论 | 定位为 `_offline_answer` 的 `if conflicts` 分支，改为"答案永远优先" |
+
+### Next
+P-006：混合检索（向量 + 词法）解决 URL 类长 token 漏召；随后技术文档 PDF 与视频脚本。

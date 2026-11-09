@@ -1,7 +1,9 @@
 """FastAPI thin wrapper over the zero-dependency core. Requires requirements.txt."""
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from .answer import compose
@@ -9,12 +11,20 @@ from .cli import DOCS as DOC_DIR, build
 
 app = FastAPI(title="校务/赛事通知可信问答助手", version="0.1.0")
 DOCUMENTS, RETRIEVER = build()
+WEB_INDEX = Path(__file__).resolve().parent / "web" / "index.html"
 
 
 class AskRequest(BaseModel):
     question: str
     top_k: int = 5
     use_llm: bool = False
+
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    if not WEB_INDEX.exists():
+        return HTMLResponse("<h1>界面文件缺失</h1><p>app/web/index.html 未找到</p>", status_code=500)
+    return HTMLResponse(WEB_INDEX.read_text(encoding="utf-8"))
 
 
 @app.get("/health")

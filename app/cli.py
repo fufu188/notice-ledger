@@ -11,11 +11,17 @@ from .retriever import Retriever
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "data" / "docs"
 
+# 评测集：全部指向真实官方语料（data/docs/official-*.md），只保留一条 demo 用于
+# 「二手整理稿 vs 官方原文」的权威度对比。每题标注的是「必须被召回的文档」。
 EVAL_SET = [
-    ("省赛报名什么时候截止？", "demo-01"),
-    ("作品提交截止是哪一天？", "demo-02"),
-    ("国赛作品提交截止和省赛评审意见分别是什么时候？", "demo-03"),
+    ("省赛作品提交截止是哪一天？", "official-01"),
+    ("省赛作品提交入口在哪里", "official-01"),
     ("选错组别会有什么后果？", "demo-04"),
+    ("省赛一等奖的比例是多少？", "official-05"),
+    ("技术文档不能超过多少页？", "official-06"),
+    ("演示视频要多长时间？", "official-06"),
+    ("国赛作品提交截止是什么时候？", "official-02"),
+    ("作品介绍文档要写哪些内容？", "official-04"),
 ]
 
 
@@ -25,14 +31,17 @@ def build():
 
 
 def run_eval(retriever, top_k):
-    passed = 0
+    passed3 = passed5 = 0
     for question, expected in EVAL_SET:
-        hits = retriever.search(question, top_k=top_k)
-        matched = [h.chunk.doc.doc_id for h in hits[:3]]
-        ok = expected in matched
-        passed += int(ok)
-        print(f"[{'PASS' if ok else 'FAIL'}] {question} -> {matched[:3]}")
-    print(f"recall@3 = {passed}/{len(EVAL_SET)} = {passed / len(EVAL_SET):.0%}")
+        hits = retriever.search(question, top_k=max(top_k, 5))
+        matched = [h.chunk.doc.doc_id for h in hits]
+        ok3, ok5 = expected in matched[:3], expected in matched[:5]
+        passed3 += int(ok3)
+        passed5 += int(ok5)
+        mark = "PASS" if ok3 else ("TOP5" if ok5 else "FAIL")
+        print(f"[{mark}] {question} -> {matched[:5]}")
+    n = len(EVAL_SET)
+    print(f"recall@3 = {passed3}/{n} = {passed3 / n:.0%} | recall@5 = {passed5}/{n} = {passed5 / n:.0%}")
 
 
 def main(argv=None):
