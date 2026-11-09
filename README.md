@@ -74,6 +74,7 @@ python -m app.cli --llm "比较三条 11.18 口径并说明各自风险"
 | 意图控制 | `SYSTEM_PROMPT` 五条硬约束（只用片段、逐条引用、冲突并列、不足拒答、整理稿不写成官方定论） | `app/answer.py` |
 | 可量化评测 | `EVAL_SET` 8 道真实语料题输出 recall@3 / recall@5；11 个标准库单测覆盖切分/检索/冲突/拒答/引用/同义扩展 | `app/cli.py`、`tests/test_core.py` |
 | Web 界面 | 单文件零依赖前端：知识库侧栏、引用溯源、口径差异高亮、拒答态、耗时统计、`#q=` 分享链接 | `app/web/index.html` |
+| 科技粒子动态视觉 | Canvas 星座粒子背景（视口自适应、鼠标交互、reduced-motion 禁用）+ 玻璃拟态面板 + 青紫霓虹 token 体系；功能与结构未动 | `app/web/index.html`、截图 `05/06` |
 | 服务接口 | FastAPI 薄封装 `/health` `/sources` `/ask` | `app/main.py` |
 
 ## 架构与约束
@@ -186,7 +187,7 @@ progress.md    会话日志
 | `evidence/submission-checklist.md` | 表单 7 字段逐项核对 | 提交物齐备 |
 | `evidence/research/README.md` | 12 项一手资料逐字摘录索引 | 需求证据可核查 |
 | `evidence/prompts/P-001…P-009.md` | 9 条完整 Prompt 链（5 条含真实修 Bug） | ≥3 条且含修 Bug 引导 |
-| `dist/notice-ledger-v1.0.zip` | 源码 + 文档 + 证据的本地打包 | 供网盘上传（表单第 5 项） |
+| `dist/notice-ledger-v1.1.zip` | 源码 + 文档 + 证据的本地打包 | 供网盘上传（表单第 5 项） |
 
 ## 10 分钟复现（裸 Python，无需 key / 联网 / 第三方包）
 

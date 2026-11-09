@@ -318,3 +318,29 @@ P-008：修 D1/D2/D3，用同一基准集复跑，禁止改基准集或调阈值
 
 ### 交付边界
 AI 侧全部完成；仅剩三项物理上须用户本人执行：Public 仓库地址与推送、本人录屏上传、WPS 表单正式提交。三者前置产物已齐备（见 `evidence/submission-checklist.md`），非待确认事项。
+
+
+## Session: 2026-11-09（续 12）— 科技粒子动态风格视觉升级（P-010）
+
+### 调研
+两轮检索 10 组结果，采信 5 个一手参考（2026 动效实践 ×1、粒子系统实现 ×2、设计 token 体系 ×2）。关键落地约束：Canvas+rAF、visibilitychange 暂停、粒子数随视口缩放、prefers-reduced-motion、transition 白名单（不用动画 shadow）、additive blending、DPR 上限 1.5。不引入外部字体/CDN 库（零依赖硬约束）。
+
+### 实施
+- 设计 token 全量重写 `:root`：深空底 #060a13 + 青 #38d9ff / 紫 #8b7bff 双强调，语义色霓虹化，动效令牌统一。
+- 逐组件升级：header 玻璃拟态+渐变光线、logo 发光、侧栏卡悬停上浮、徽章微光晕、卡片玻璃+fade-rise 进场、五要素网格点亮、textarea focus 光环、发送键青紫渐变、自定义滚动条。
+- 新增约 70 行零依赖粒子 IIFE：星座连线 + 鼠标交互 + lighter 混合发光，性能与可访问性规则全部落实。
+- 业务 JS（boot/ask/render*）与 DOM 结构一字未改。
+
+### 修复的异常
+| 异常 | 根因 | 修复 |
+|---|---|---|
+| div 配平 10/9 | 首次写入时 `.brand` 缺闭合标签 | 补 `</div>`，复验 10/10 |
+| 首轮截图次要文字对比度偏低 | `--fg-faint #5d6779` 过暗 | 提升至 `#6f7a8c`（dim 同步提亮），复验可读 |
+
+### 验证
+- HTML 配平 10/10；JS `new Function` 编译通过；`app.server --selftest` 全通；**35/35 单测 OK**。
+- 无头截图问答态+空态双份人工核验：粒子/连线、发光 logo、渐变按钮、五要素卡片、徽章、引用块全部正确渲染，无溢出重叠。
+- 新增存证 `evidence/screenshots/05-tech-particle-answer.png`、`06-tech-particle-empty.png`（保留 01–04 演进链）。
+
+### 产出
+`app/web/index.html`（视觉层重写）、`evidence/prompts/P-010.md`、截图 05/06、重打包 `dist/notice-ledger-v1.1.zip`。
