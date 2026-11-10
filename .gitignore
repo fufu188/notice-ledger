@@ -24,6 +24,9 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
+# 启动器运行日志（本地产生，不入库）
+start-ui.log
+
 # 过程证据中的大视频（截图是评审材料，必须入库）
 *.mp4
 *.mov
