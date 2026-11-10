@@ -33,8 +33,15 @@ python -m app.server --port 8000    # 常驻服务，浏览器打开 http://127.
 curl -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" -d "{\"question\":\"选错组别会怎样\"}"
 ```
 
-Windows 下也可以直接双击项目根目录的 **`start-ui.bat`**：它会先检查 8000 是否已被旧进程占用（这正是
-"面板显示接口不可用"的常见成因），再拉起服务并打开浏览器。
+Windows 一键启动：双击桌面启动器 **`C:\Users\ASUS\Desktop\notice-ledger-launcher\1-open-ui.bat`**
+（项目内副本：`C:\Users\ASUS\Desktop\rag\start-ui.bat`）。
+它会**先启动服务、等 `/health` 与 `/api/overview` 都通了，再打开浏览器**，不会再出现首屏
+`ERR_CONNECTION_REFUSED`；同目录 `2-check-only.bat` 只做自检，不启动服务、不开浏览器。
+
+启动器实际逻辑在 `tools/launch_ui.py`，`.bat` 只有 5 行、纯 ASCII + CRLF（遵循本机脚本规范）。
+日志写到 `C:\Users\ASUS\Desktop\rag\start-ui.log`，每行带时间戳，结尾给 `[OK]` / `[FAIL]`。
+停止服务：在启动器黑窗口按 **Ctrl+C**；直接关窗口可能留下后台 python 进程，重新双击会自动识别并复用
+（若识别到的是缺 `/api/overview` 的旧进程，会明确报错并让你先关旧窗口）。
 
 > **改了代码/加了文档，必须重启服务进程**。`index.html` 是每次请求从磁盘读的，所以页面永远是新的；
 > 而 Python 进程启动时就把模块与索引加载进内存，**不会热更新**。于是会出现"新页面 + 旧后端"：

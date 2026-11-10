@@ -436,3 +436,43 @@ AI 侧全部完成；仅剩三项物理上须用户本人执行：Public 仓库�
 ### 产出
 `app/web/index.html`（失败态 + 单一口径 + SKIP_ANIM + 环内文案）、`tools/mock_stale_server.py`、
 `start-ui.bat`、`docs/ui-modules.md` 第九节、README「重启须知」与自检三行、`evidence/screenshots/10-panel-fallback.png`。
+
+## Session: 2026-11-10 — 启动器翻车复盘：按长期记忆规范重做并实测
+
+### 用户反馈
+双击 `start-ui.bat` 后浏览器显示 `127.0.0.1 拒绝连接`；并指出「我之前写入到长期记忆的错误你没看吗」。
+核对 `~/.workbuddy/.../MEMORY.md` 第 53–75 行，确认**六条硬性规范全部违反**。
+
+### 旧脚本的问题（字节级证据）
+| 规范 | 实测 | 后果 |
+|---|---|---|
+| 纯 ASCII、无中文 | 含"校务·赛事通知可信问答助手"等中文，UTF-8 | cmd 按 GBK 解析乱码 |
+| 不用 `chcp 65001` | 用了 | 批处理解析中断 bug |
+| CRLF | **0 个 CRLF / 31 个裸 LF** | 括号块解析异常 |
+| 不吞 stdout/stderr | `chcp ... >nul`、`netstat ... >nul` | 报错看不见 |
+| 日志 + `[OK]/[FAIL]` | 无 | 闪退后无线索 |
+| 交付前自验 + 桌面副本 + 完整绝对路径 | 全没做 | 用户找不到、也不敢信 |
+
+**另有一条独立根因**：`start "" http://...` 写在 Python 服务命令之前，浏览器必然先于端口绑定打开，
+首屏就是 `ERR_CONNECTION_REFUSED`。加上会话里 `run_in_background` 起的服务被沙箱回收，第二天自然没后端。
+
+### 重做
+- `tools/launch_ui.py`：所有逻辑移到 Python。启动服务 → 轮询端口 → 校验 `/health` 与 `/api/overview`
+  → 打印 `docs/chunks/claims` 自检 → 才 `webbrowser.open()`；旧进程（overview 404）明确报错并给处理办法；
+  Ctrl+C 时 terminate 子进程；全程写 `start-ui.log`；本地请求用 `ProxyHandler({})` 绕开 7897 代理。
+  带 `--check-only`、`--no-browser`、`--self-test-seconds N`、`--port`。
+- 三个 `.bat` 统一为 5 行：纯 ASCII / CRLF / 无 BOM / 无 chcp / 绝对路径 / 不吞输出 / 末尾 pause。
+- 桌面启动器 `C:/Users/ASUS/Desktop/notice-ledger-launcher/`：`1-open-ui.bat`、`2-check-only.bat`。
+
+### 实测（从桌面实际交付位置跑，非源目录）
+| 用例 | 结果 |
+|---|---|
+| 字节级规范（3 个 bat） | nonASCII=0、CRLF 7/7、无 BOM、无 chcp、绝对路径、末尾 pause 全 OK |
+| `2-check-only.bat` dry-run | 退出码 0，`[OK] check-only passed`，日志生成 |
+| `1-open-ui.bat --no-browser --self-test-seconds 3` | 退出码 0，1 秒内服务就绪，`[OK] docs=10 chunks=64 claims=141`，3 秒后自动停服并释放端口 |
+| 旧进程分支（mock_stale_server 占 8000） | `--check-only` 退出码 1，明确提示 "an OLD server process owns the port" + 关窗指引 |
+| 35 单测 | 未受影响（本次只动启动器与文档） |
+
+### 产出
+`tools/launch_ui.py`、三个 `.bat`、桌面启动器目录、`.gitignore`（忽略日志）、README 启动段、
+`dist/notice-ledger-v1.2.2.zip`；长期记忆追加「启动器交付规范」小节。
