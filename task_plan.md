@@ -7,6 +7,7 @@
 ## Goal
 
 在 2026-11-18 省赛节点前，交付一个由 AI 辅助编程完成、可运行、有真实痛点、且全过程可复现的「场景化轻量 RAG 知识库」作品（Python/FastAPI）及齐备提交物。
+> **状态更新（2026-11-12 09:30）**：本文件保留为当时的排期/阶段快照。Public 仓库已建成并推送（34 次提交，`https://github.com/fufu188/notice-ledger.git`，200 可访问），AI 侧全部产物已齐备（35 单测、两份 PDF 14/8 页、11 条 Prompt 链、v1.2.3 源码包、视频分镜脚本）。仍待参赛者本人完成：录屏并上传 B 站/抖音、源码包上传网盘取链、WPS 表单正式提交留回执。当前唯一权威清单见 `evidence/submission-checklist.md` 与 `README.md`「官方交付物对照」。
 
 ## Next Step
 
